@@ -1,0 +1,38 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Build Sentry Debug",
+      "type": "process",
+      "command": "C:/Program Files/JetBrains/CLion 2026.1/bin/cmake/win/x64/bin/cmake.exe",
+      "args": [
+        "--build",
+        "C:/0Embedded/robomaster/Robomaster_project/WSNS_Sentry/Sentry/build/Debug"
+      ],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Flash Sentry",
+      "type": "process",
+      "command": "C:/0Embedded/ClionToolChains/OpenOCD-20231002-0.12.0/bin/openocd.EXE",
+      "args": [
+        "-f",
+        "interface/stlink.cfg",
+        "-f",
+        "target/stm32h7x.cfg",
+        "-c",
+        "program {C:/0Embedded/robomaster/Robomaster_project/WSNS_Sentry/Sentry/build/Debug/Sentry.elf} verify",
+        "-c",
+        "reset",
+        "-c",
+        "exit"
+      ],
+      "dependsOn": "Build Sentry Debug",
+      "problemMatcher": []
+    }
+  ]
+}

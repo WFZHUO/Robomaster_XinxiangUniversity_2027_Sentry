@@ -1,0 +1,38 @@
+# Build
+build/
+cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
+compile_commands.json
+Testing/
+cmake_install.cmake
+Makefile
+.ninja_*
+*.ninja
+*.o
+*.obj
+*.d
+*.a
+*.lib
+*.elf
+*.bin
+*.hex
+*.map
+*.lst
+
+# IDE / Editor
+.vscode/*
+!.vscode/tasks.json
+.idea/
+.settings/
+mx.scratch
+*.launch
+
+# Tooling
+.clangd
+
+# OS / temp
+.DS_Store
+Thumbs.db
+*.log
+*.tmp

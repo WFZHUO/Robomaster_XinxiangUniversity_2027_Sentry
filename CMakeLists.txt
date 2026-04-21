@@ -52,6 +52,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     User_File/5_Task/tsk_config_and_callback.cpp
     User_File/2_Device/BSP/Buzzer/bsp_buzzer.cpp
     User_File/2_Device/BSP/Buzzer/bsp_BuzzerSongs.cpp
+    User_File/2_Device/BSP/Key/bsp_arkey.cpp
 )
 
 # Add include paths
@@ -60,6 +61,7 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     User_File/1_Middleware/Driver/TIM
     User_File/5_Task
     User_File/2_Device/BSP/Buzzer
+    User_File/2_Device/BSP/Key
 )
 
 # Add project symbols (macros)

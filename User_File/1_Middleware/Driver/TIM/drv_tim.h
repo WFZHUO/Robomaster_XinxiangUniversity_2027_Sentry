@@ -1,7 +1,7 @@
 /**
  * @file drv_tim.h
  * @author WangFonzhuo
- * @brief TIM定时器初始化与配置流程
+ * @brief TIM通用接口
  * @version 1.0
  * @date 2025-12-30 26赛季定稿
  * @date 2026-04-18 27赛季
@@ -39,10 +39,10 @@ struct Struct_TIM_Manage_Object
 
 /* Exported variables --------------------------------------------------------*/
 
-//全局初始化完成标志位
+// 全局初始化完成标志位
 extern bool init_finished;
 
-//声明TIM定时器管理对象
+// 声明TIM定时器管理对象
 extern Struct_TIM_Manage_Object TIM1_Manage_Object;
 extern Struct_TIM_Manage_Object TIM2_Manage_Object;
 extern Struct_TIM_Manage_Object TIM3_Manage_Object;

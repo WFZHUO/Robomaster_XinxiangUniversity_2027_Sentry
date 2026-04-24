@@ -229,6 +229,15 @@ SECTIONS
   PROVIDE( __bss_start = __tbss_start );
   PROVIDE( __bss_size = __bss_end - __bss_start );
 
+  /* DMA buffers: place in RAM_D2, NOT in DTCM */
+  .dma_buffer (NOLOAD) :
+  {
+    . = ALIGN(4);
+    *(.dma_buffer)
+    *(.dma_buffer*)
+    . = ALIGN(4);
+  } >RAM_D2
+
   /* User_heap_stack section, used to check that there is enough RAM left */
   ._user_heap_stack (NOLOAD) :
   {

@@ -14,6 +14,7 @@
 #include "bsp_BuzzerSongs.h"
 #include "bsp_arkey.h"
 #include "drv_tim.h"
+#include "drv_uart.h"
 
 /* Macros --------------------------------------------------------------------*/
 
@@ -32,8 +33,18 @@ bool init_finished = false;
 /* Function definitions ------------------------------------------------------*/
 
 /**
- * @brief 每1ms调用一次
- *
+ * @brief UART1任务回调函数
+ */
+void UART1_Callback(uint8_t *Buffer, uint16_t Length)
+{
+    // 处理接收到的数据
+    // 这里简单地回传接收到的数据
+    HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_15);   
+    UART_Transmit_Data(&huart1, Buffer, Length);
+}
+
+/**
+ * @brief 1ms定时器回调函数
  */
 void Task1ms_Callback()
 {
@@ -72,6 +83,8 @@ void Task_Init()
 
     // 初始化TIM
     TIM_Init(&htim7, Task1ms_Callback);
+    // 初始化UART
+    UART_Init(&huart1, UART1_Callback);
 
     // 定时器中断初始化
     HAL_TIM_Base_Start_IT(&htim7);

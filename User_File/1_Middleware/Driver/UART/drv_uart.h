@@ -15,7 +15,6 @@ extern "C" {
 
 /* Includes ------------------------------------------------------------------*/
 
-//#include "1_Middleware/System/Timestamp/sys_timestamp.h"
 #include "usart.h"
 #include "stm32h7xx_hal.h"
 

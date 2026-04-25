@@ -15,6 +15,7 @@
 #include "bsp_arkey.h"
 #include "drv_tim.h"
 #include "drv_uart.h"
+#include "sys_timestamp.h"
 
 /* Macros --------------------------------------------------------------------*/
 
@@ -72,10 +73,20 @@ void Task1ms_Callback()
 }
 
 /**
+ * @brief 3600s定时器回调函数
+ */
+void Task3600s_Callback()
+{
+    SYS_Timestamp.TIM_3600s_PeriodElapsedCallback();
+}
+
+/**
  * @brief 主程序任务初始化函数
  */
 void Task_Init()
 {
+    // 初始化时间戳
+    SYS_Timestamp.Init(&htim5);
     // 初始化蜂鸣器
     BSP_Buzzer.Init();
     // 初始化Key
@@ -83,11 +94,13 @@ void Task_Init()
 
     // 初始化TIM
     TIM_Init(&htim7, Task1ms_Callback);
+    TIM_Init(&htim5, Task3600s_Callback);
     // 初始化UART
     UART_Init(&huart1, UART1_Callback);
 
     // 定时器中断初始化
     HAL_TIM_Base_Start_IT(&htim7);
+    HAL_TIM_Base_Start_IT(&htim5);
 
     // 设置初始化完成标志位
     init_finished = true;
@@ -102,7 +115,7 @@ void Task_Loop()
 
     if (played == false)
     {
-        BuzzerSongs_Play_Gala_You();
+        // BuzzerSongs_Play_Gala_You();
         played = true;
     }
 }

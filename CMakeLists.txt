@@ -55,6 +55,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     User_File/2_Device/BSP/Key/bsp_arkey.cpp
     User_File/1_Middleware/Driver/UART/drv_uart.cpp
     User_File/1_Middleware/System/Timestamp/sys_timestamp.cpp
+    User_File/2_Device/Plotter/Serialplot/dvc_serialplot.cpp
 )
 
 # Add include paths
@@ -66,6 +67,7 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     User_File/2_Device/BSP/Key
     User_File/1_Middleware/Driver/UART
     User_File/1_Middleware/System/Timestamp
+    User_File/2_Device/Plotter/Serialplot
 )
 
 # Add project symbols (macros)

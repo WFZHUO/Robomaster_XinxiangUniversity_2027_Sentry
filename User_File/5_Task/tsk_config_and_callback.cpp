@@ -16,6 +16,7 @@
 #include "drv_tim.h"
 #include "drv_uart.h"
 #include "sys_timestamp.h"
+#include "dvc_serialplot.h"
 
 /* Macros --------------------------------------------------------------------*/
 
@@ -26,22 +27,49 @@
 // 板载Key
 Class_ArkKey Key;
 
+// Serialplot
+Class_Serialplot_UART Serialplot;
+const char *Serialplot_Rx_List[] =
+{
+    "p",
+    "i",
+    "d",
+};
+
 // 全局初始化完成标志位
 bool init_finished = false;
+
+float p,i,d = 100;
 
 /* Function prototypes -------------------------------------------------------*/
 
 /* Function definitions ------------------------------------------------------*/
 
 /**
- * @brief UART1任务回调函数
+ * @brief UART1任务回调函数, 绑定Serialplot
  */
 void UART1_Callback(uint8_t *Buffer, uint16_t Length)
 {
-    // 处理接收到的数据
-    // 这里简单地回传接收到的数据
+    Serialplot.UART_RxCpltCallback(Buffer, Length);
+
+    switch (Serialplot.Get_Variable_Index())
+    {
+    case 0:
+        p = Serialplot.Get_Variable_Value();
+        break;
+
+    case 1:
+        i = Serialplot.Get_Variable_Value();
+        break;
+
+    case 2:
+        d = Serialplot.Get_Variable_Value();
+        break;
+
+    default:
+        break;
+    }
     HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_15);   
-    UART_Transmit_Data(&huart1, Buffer, Length);
 }
 
 /**
@@ -51,6 +79,7 @@ void Task1ms_Callback()
 {
     // 1ms任务
 
+    // 按键状态更新
     if(Key.isPressed)
     {
         // 按键测试, 按一次LED翻转一次
@@ -59,8 +88,18 @@ void Task1ms_Callback()
     
     Class_ArkKey::ClearAllFlags();
 
-    // 15ms任务
+    // 10ms任务
+    static uint16_t mod10 = 0;
+    mod10++;
+    if(mod10 == 10)
+    {
+        mod10 = 0;
 
+        // Serialplot
+        Serialplot.TIM_1ms_Write_PeriodElapsedCallback();
+    }
+
+    // 15ms任务
     static uint16_t mod15 = 0;
     mod15++;
     if(mod15 == 15)
@@ -91,6 +130,9 @@ void Task_Init()
     BSP_Buzzer.Init();
     // 初始化Key
     Key.Init(GPIOA, GPIO_PIN_15);
+    // 初始化Serialplot
+    Serialplot.Init(&huart1,Serialplot_Checksum_8_ENABLE,3, Serialplot_Rx_List, Serialplot_Data_Type_FLOAT, 0xab);
+    Serialplot.Set_Data(3, &p, &i, &d);
 
     // 初始化TIM
     TIM_Init(&htim7, Task1ms_Callback);

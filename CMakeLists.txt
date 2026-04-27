@@ -40,6 +40,29 @@ add_executable(${CMAKE_PROJECT_NAME})
 # Add STM32CubeMX generated sources
 add_subdirectory(cmake/stm32cubemx)
 
+# Add CMSIS-DSP / arm_math
+set(CMSIS_DSP_ROOT ${CMAKE_SOURCE_DIR}/Drivers/CMSIS/DSP)
+
+add_library(cmsis_dsp STATIC
+    ${CMSIS_DSP_ROOT}/Source/BasicMathFunctions/BasicMathFunctions.c
+    ${CMSIS_DSP_ROOT}/Source/FastMathFunctions/FastMathFunctions.c
+    ${CMSIS_DSP_ROOT}/Source/MatrixFunctions/MatrixFunctions.c
+    ${CMSIS_DSP_ROOT}/Source/StatisticsFunctions/StatisticsFunctions.c
+    ${CMSIS_DSP_ROOT}/Source/SupportFunctions/SupportFunctions.c
+    ${CMSIS_DSP_ROOT}/Source/ControllerFunctions/ControllerFunctions.c
+    ${CMSIS_DSP_ROOT}/Source/CommonTables/CommonTables.c
+)
+
+target_include_directories(cmsis_dsp PUBLIC
+    ${CMSIS_DSP_ROOT}/Include
+    ${CMAKE_SOURCE_DIR}/Drivers/CMSIS/Include
+)
+
+target_compile_definitions(cmsis_dsp PUBLIC
+    ARM_MATH_CM7
+    ARM_MATH_LOOPUNROLL
+)
+
 # Link directories setup
 target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined library search paths
@@ -56,6 +79,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     User_File/1_Middleware/Driver/UART/drv_uart.cpp
     User_File/1_Middleware/System/Timestamp/sys_timestamp.cpp
     User_File/2_Device/Plotter/Serialplot/dvc_serialplot.cpp
+    User_File/1_Middleware/Algorithm/Basic/alg_basic.cpp
 )
 
 # Add include paths
@@ -68,6 +92,7 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     User_File/1_Middleware/Driver/UART
     User_File/1_Middleware/System/Timestamp
     User_File/2_Device/Plotter/Serialplot
+    User_File/1_Middleware/Algorithm/Basic
 )
 
 # Add project symbols (macros)
@@ -82,6 +107,6 @@ list(REMOVE_ITEM CMAKE_CXX_IMPLICIT_LINK_LIBRARIES ob)
 # Add linked libraries
 target_link_libraries(${CMAKE_PROJECT_NAME}
     stm32cubemx
-
+    cmsis_dsp
     # Add user defined libraries
 )

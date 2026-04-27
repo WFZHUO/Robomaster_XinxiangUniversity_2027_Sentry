@@ -39,7 +39,8 @@ const char *Serialplot_Rx_List[] =
 // 全局初始化完成标志位
 bool init_finished = false;
 
-float p,i,d = 100;
+// serialplot测试用变量
+float p,i,d;
 
 /* Function prototypes -------------------------------------------------------*/
 
@@ -85,8 +86,10 @@ void Task1ms_Callback()
         // 按键测试, 按一次LED翻转一次
         HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_15);   
     }
-    
     Class_ArkKey::ClearAllFlags();
+    
+    // Serialplot
+    Serialplot.TIM_1ms_Write_PeriodElapsedCallback();
 
     // 10ms任务
     static uint16_t mod10 = 0;
@@ -94,9 +97,6 @@ void Task1ms_Callback()
     if(mod10 == 10)
     {
         mod10 = 0;
-
-        // Serialplot
-        Serialplot.TIM_1ms_Write_PeriodElapsedCallback();
     }
 
     // 15ms任务

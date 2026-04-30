@@ -72,10 +72,7 @@ protected:
     // 定时器溢出计数, 一小时溢出一次
     volatile uint32_t TIM_Overflow_Count = 0;
 
-    /**
-     * @brief 计算时间戳
-     * @return 计算得到的时间戳
-     */
+    // 计算当前时间戳
     uint64_t Calculate_Timestamp() const;
 };
 

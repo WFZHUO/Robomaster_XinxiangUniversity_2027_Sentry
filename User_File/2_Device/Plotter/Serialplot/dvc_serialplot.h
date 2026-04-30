@@ -125,39 +125,19 @@ protected:
     // 当前接收指令的值
     float Variable_Value = 0.0f;
 
-    /**
-     * @brief 数据处理函数
-     * @param Rx_Data 接收到的数据
-     * @param Length 数据长度
-     */
+    // 数据处理函数
     void Data_Process(const uint8_t *Rx_Data, uint16_t Length);
 
-    /**
-     * @brief 判断接收指令名称
-     * @param Rx_Data 接收到的数据
-     * @param Length 数据长度
-     * @param value_start_index 值的起始索引
-     * @return 指令编号
-     */
+    // 判断接收指令名称
     int32_t Judge_Variable_Name(const uint8_t *Rx_Data, uint16_t Length, uint16_t *value_start_index);
 
-    /**
-     * @brief 判断接收指令值
-     * @param Rx_Data 接收到的数据
-     * @param Length 数据长度
-     * @param value_start_index 值的起始索引
-     */
+    // 判断接收指令值
     void Judge_Variable_Value(const uint8_t *Rx_Data, uint16_t Length, uint16_t value_start_index);
 
-    /**
-     * @brief 输出数据
-     */
+    // 计算校验和
     void Output();
 
-    /**
-     * @brief 获取数据类型大小
-     * @return 数据类型大小
-     */
+    // 输出数据
     uint16_t Get_Data_Type_Size() const;
 };
 

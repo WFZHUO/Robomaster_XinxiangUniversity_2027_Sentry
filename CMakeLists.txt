@@ -80,6 +80,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     User_File/1_Middleware/System/Timestamp/sys_timestamp.cpp
     User_File/2_Device/Plotter/Serialplot/dvc_serialplot.cpp
     User_File/1_Middleware/Algorithm/Basic/alg_basic.cpp
+    User_File/1_Middleware/Algorithm/PID/alg_pid.cpp
 )
 
 # Add include paths
@@ -93,6 +94,7 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     User_File/1_Middleware/System/Timestamp
     User_File/2_Device/Plotter/Serialplot
     User_File/1_Middleware/Algorithm/Basic
+    User_File/1_Middleware/Algorithm/PID
 )
 
 # Add project symbols (macros)

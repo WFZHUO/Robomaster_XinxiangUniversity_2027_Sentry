@@ -17,6 +17,7 @@
 #include "drv_uart.h"
 #include "sys_timestamp.h"
 #include "dvc_serialplot.h"
+#include "drv_usb.h"
 
 /* Macros --------------------------------------------------------------------*/
 
@@ -71,6 +72,17 @@ void UART1_Callback(uint8_t *Buffer, uint16_t Length)
         break;
     }
     HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_15);   
+}
+
+/**
+ * @brief USB任务回调函数
+ */
+void USB0_Callback(uint8_t *Buffer, uint16_t Length)
+{
+    // USB回传测试
+    USB_Transmit_Data(Buffer, Length);
+
+    HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_15);
 }
 
 /**
@@ -133,6 +145,9 @@ void Task_Init()
     // 初始化Serialplot
     Serialplot.Init(&huart1,Serialplot_Checksum_8_ENABLE,3, Serialplot_Rx_List, Serialplot_Data_Type_FLOAT, 0xab);
     Serialplot.Set_Data(3, &p, &i, &d);
+
+    // 初始化USB
+    USB_Init(USB0_Callback);
 
     // 初始化TIM
     TIM_Init(&htim7, Task1ms_Callback);

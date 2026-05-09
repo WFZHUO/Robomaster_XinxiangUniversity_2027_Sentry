@@ -1,13 +1,12 @@
-/* USER CODE BEGIN Header */
 /**
   ******************************************************************************
-  * @file           : main.h
-  * @brief          : Header for main.c file.
-  *                   This file contains the common defines of the application.
+  * @file    usbd_cdc_if_template.h
+  * @author  MCD Application Team
+  * @brief   Header for usbd_cdc_if_template.c file.
   ******************************************************************************
   * @attention
   *
-  * Copyright (c) 2026 STMicroelectronics.
+  * Copyright (c) 2015 STMicroelectronics.
   * All rights reserved.
   *
   * This software is licensed under terms that can be found in the LICENSE file
@@ -16,54 +15,29 @@
   *
   ******************************************************************************
   */
-/* USER CODE END Header */
 
 /* Define to prevent recursive inclusion -------------------------------------*/
-#ifndef __MAIN_H
-#define __MAIN_H
+#ifndef __USBD_CDC_IF_TEMPLATE_H
+#define __USBD_CDC_IF_TEMPLATE_H
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /* Includes ------------------------------------------------------------------*/
-#include "stm32h7xx_hal.h"
-
-/* Private includes ----------------------------------------------------------*/
-/* USER CODE BEGIN Includes */
-
-/* USER CODE END Includes */
+#include "usbd_cdc.h"
 
 /* Exported types ------------------------------------------------------------*/
-/* USER CODE BEGIN ET */
-
-/* USER CODE END ET */
-
 /* Exported constants --------------------------------------------------------*/
-/* USER CODE BEGIN EC */
 
-/* USER CODE END EC */
+extern USBD_CDC_ItfTypeDef  USBD_CDC_Template_fops;
 
 /* Exported macro ------------------------------------------------------------*/
-/* USER CODE BEGIN EM */
-
-/* USER CODE END EM */
-
-/* Exported functions prototypes ---------------------------------------------*/
-void Error_Handler(void);
-
-/* USER CODE BEGIN EFP */
-
-/* USER CODE END EFP */
-
-/* Private defines -----------------------------------------------------------*/
-
-/* USER CODE BEGIN Private defines */
-
-/* USER CODE END Private defines */
+/* Exported functions ------------------------------------------------------- */
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* __MAIN_H */
+#endif /* __USBD_CDC_IF_TEMPLATE_H */
+

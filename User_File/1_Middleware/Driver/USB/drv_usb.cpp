@@ -105,6 +105,11 @@ void USB_ReceiveCallback(uint8_t *Buffer, uint32_t Length)
         return;
     }
 
+    if (Length > USB_BUFFER_SIZE)
+    {
+        Length = USB_BUFFER_SIZE;
+    }
+
     // 自设双缓冲USB
     if (Buffer != USB_Manage_Object.Rx_Buffer_Active)
     {

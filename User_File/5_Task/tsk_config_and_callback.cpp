@@ -29,7 +29,7 @@
 Class_ArkKey Key;
 
 // Serialplot
-Class_Serialplot_UART Serialplot;
+Class_Serialplot_USB Serialplot;
 const char *Serialplot_Rx_List[] =
 {
     "p",
@@ -48,41 +48,38 @@ float p,i,d;
 /* Function definitions ------------------------------------------------------*/
 
 /**
- * @brief UART1任务回调函数, 绑定Serialplot
+ * @brief UART1任务回调函数
  */
 void UART1_Callback(uint8_t *Buffer, uint16_t Length)
 {
-    Serialplot.UART_RxCpltCallback(Buffer, Length);
-
-    switch (Serialplot.Get_Variable_Index())
-    {
-    case 0:
-        p = Serialplot.Get_Variable_Value();
-        break;
-
-    case 1:
-        i = Serialplot.Get_Variable_Value();
-        break;
-
-    case 2:
-        d = Serialplot.Get_Variable_Value();
-        break;
-
-    default:
-        break;
-    }
     HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_15);   
 }
 
 /**
- * @brief USB任务回调函数
+ * @brief USB任务回调函数, 绑定serialplot
  */
 void USB0_Callback(uint8_t *Buffer, uint16_t Length)
 {
-    // USB回传测试
-    USB_Transmit_Data(Buffer, Length);
+    Serialplot.USB_RxCpltCallback(Buffer, Length);
 
-    HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_15);
+    switch (Serialplot.Get_Variable_Index())
+    {
+        case 0:
+            p = Serialplot.Get_Variable_Value();
+            break;
+
+        case 1:
+            i = Serialplot.Get_Variable_Value();
+            break;
+
+        case 2:
+            d = Serialplot.Get_Variable_Value();
+            break;
+
+        default:
+            break;
+    }
+    HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_15);   
 }
 
 /**
@@ -143,7 +140,7 @@ void Task_Init()
     // 初始化Key
     Key.Init(GPIOA, GPIO_PIN_15);
     // 初始化Serialplot
-    Serialplot.Init(&huart1,Serialplot_Checksum_8_ENABLE,3, Serialplot_Rx_List, Serialplot_Data_Type_FLOAT, 0xab);
+    Serialplot.Init(Serialplot_Checksum_8_ENABLE,3, Serialplot_Rx_List, Serialplot_Data_Type_FLOAT, 0xab);
     Serialplot.Set_Data(3, &p, &i, &d);
 
     // 初始化USB

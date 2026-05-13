@@ -29,7 +29,7 @@ extern "C" {
  * @brief USB通信接收回调函数数据类型
  *
  */
-typedef void (*USB_Callback)(uint8_t *Buffer, uint16_t Length);
+typedef void (*USB_Callback)(uint8_t *Buffer, uint32_t Length);
 
 /**
  * @brief USB通信处理结构体

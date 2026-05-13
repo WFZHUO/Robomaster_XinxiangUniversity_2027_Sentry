@@ -18,6 +18,7 @@
 #include "sys_timestamp.h"
 #include "dvc_serialplot.h"
 #include "drv_usb.h"
+#include "dvc_vofa.h"
 
 /* Macros --------------------------------------------------------------------*/
 
@@ -28,20 +29,21 @@
 // 板载Key
 Class_ArkKey Key;
 
-// Serialplot
-Class_Serialplot_USB Serialplot;
-const char *Serialplot_Rx_List[] =
+// Vofa
+Class_VofaSum8_USB Vofa;
+const char *Vofa_Rx_List[] =
 {
     "p",
     "i",
     "d",
+    "fre",
 };
 
 // 全局初始化完成标志位
 bool init_finished = false;
 
-// serialplot测试用变量
-float p,i,d;
+// Vofa测试用变量
+float p,i,d,fre;
 
 /* Function prototypes -------------------------------------------------------*/
 
@@ -56,29 +58,34 @@ void UART1_Callback(uint8_t *Buffer, uint16_t Length)
 }
 
 /**
- * @brief USB任务回调函数, 绑定serialplot
+ * @brief USB任务回调函数, 绑定Vofa
  */
-void USB0_Callback(uint8_t *Buffer, uint16_t Length)
+void USB0_Callback(uint8_t *Buffer, uint32_t Length)
 {
-    Serialplot.USB_RxCpltCallback(Buffer, Length);
+    Vofa.USB_RxCpltCallback(Buffer, static_cast<uint16_t>(Length));
 
-    switch (Serialplot.Get_Variable_Index())
+    switch (Vofa.Get_Variable_Index())
     {
         case 0:
-            p = Serialplot.Get_Variable_Value();
+            p = Vofa.Get_Variable_Value();
             break;
 
         case 1:
-            i = Serialplot.Get_Variable_Value();
+            i = Vofa.Get_Variable_Value();
             break;
 
         case 2:
-            d = Serialplot.Get_Variable_Value();
+            d = Vofa.Get_Variable_Value();
+            break;
+
+        case 3:
+            fre = Vofa.Get_Variable_Value();
             break;
 
         default:
             break;
     }
+
     HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_15);   
 }
 
@@ -97,8 +104,11 @@ void Task1ms_Callback()
     }
     Class_ArkKey::ClearAllFlags();
     
-    // Serialplot
-    Serialplot.TIM_1ms_Write_PeriodElapsedCallback();
+    // Vofa
+    if(fre == 1.0f) // 根据fre的值来控制是否开启Vofa的1ms周期发送, 以节省资源
+    {
+        Vofa.TIM_1ms_Write_PeriodElapsedCallback();
+    }
 
     // 10ms任务
     static uint16_t mod10 = 0;
@@ -139,9 +149,9 @@ void Task_Init()
     BSP_Buzzer.Init();
     // 初始化Key
     Key.Init(GPIOA, GPIO_PIN_15);
-    // 初始化Serialplot
-    Serialplot.Init(Serialplot_Checksum_8_ENABLE,3, Serialplot_Rx_List, Serialplot_Data_Type_FLOAT, 0xab);
-    Serialplot.Set_Data(3, &p, &i, &d);
+    // 初始化Vofa
+    Vofa.Init(4, Vofa_Rx_List);
+    Vofa.Set_Data(4, &p, &i, &d, &fre);
 
     // 初始化USB
     USB_Init(USB0_Callback);

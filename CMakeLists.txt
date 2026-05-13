@@ -82,6 +82,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     User_File/1_Middleware/Algorithm/Basic/alg_basic.cpp
     User_File/1_Middleware/Algorithm/PID/alg_pid.cpp
     User_File/1_Middleware/Driver/USB/drv_usb.cpp
+    User_File/2_Device/Plotter/Vofa/dvc_vofa.cpp
 )
 
 # Add include paths
@@ -97,6 +98,7 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     User_File/1_Middleware/Algorithm/Basic
     User_File/1_Middleware/Algorithm/PID
     User_File/1_Middleware/Driver/USB
+    User_File/2_Device/Plotter/Vofa
 )
 
 # Add project symbols (macros)

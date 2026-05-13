@@ -1,14 +1,17 @@
 /**
- * @file dvc_serialplot.cpp
+ * @file dvc_vofa.cpp
  * @author WangFonzhuo
- * @brief Serialplot串口绘图
+ * @brief Vofa+绘图调参工具, 使用自定义协议, 带8位累加和校验
+ *        单片机发送格式是：0xAB + float0 + float1 + ... + floatN + 0x7F800000 + sum8
+ *        sum8 = 从 0xAB 到 0x7F800000 最后一个字节的 8 位累加和
+ *        VOFA+ 端必须用自定义协议RMFloatSum8.dll 协议引擎解析
  * @version 1.0
- * @date 2026-04-25 27赛季
+ * @date 2026-05-12 27赛季
  */
 
 /* Includes ------------------------------------------------------------------*/
 
-#include "dvc_serialplot.h"
+#include "dvc_vofa.h"
 
 /* Macros --------------------------------------------------------------------*/
 
@@ -16,17 +19,21 @@
 
 /* Variables -----------------------------------------------------------------*/
 
-// Serialplot发送缓冲区, 单独定义 DMA 专用缓冲区
-__attribute__((section(".dma_buffer"))) static uint8_t Serialplot_Tx_Buffer[UART_BUFFER_SIZE];
+// Vofa+发送缓冲区, 放入DMA可访问区域
+__attribute__((section(".dma_buffer"))) static uint8_t VofaSum8_UART_Tx_Buffer[VOFA_SUM8_TX_BUFFER_MAX_SIZE];
+__attribute__((section(".dma_buffer"))) static uint8_t VofaSum8_USB_Tx_Buffer[VOFA_SUM8_TX_BUFFER_MAX_SIZE];
 
 /* Function prototypes -------------------------------------------------------*/
+
+static uint8_t VofaSum8_Sum_8(const uint8_t *Address, uint32_t Length);
+static float VofaSum8_Parse_Float(const uint8_t *Data, uint16_t Start, uint16_t End);
 
 /* Function definitions ------------------------------------------------------*/
 
 /**
  * @brief 8位累加和校验
  */
-static uint8_t Serialplot_Sum_8(const uint8_t *Address, uint32_t Length)
+static uint8_t VofaSum8_Sum_8(const uint8_t *Address, uint32_t Length)
 {
     uint8_t sum = 0;
 
@@ -46,7 +53,7 @@ static uint8_t Serialplot_Sum_8(const uint8_t *Address, uint32_t Length)
 /**
  * @brief 简易字符串转float, 解析形如 -12.34 的十进制数
  */
-static float Serialplot_Parse_Float(const uint8_t *Data, uint16_t Start, uint16_t End)
+static float VofaSum8_Parse_Float(const uint8_t *Data, uint16_t Start, uint16_t End)
 {
     if (Data == nullptr || Start >= End)
     {
@@ -100,20 +107,18 @@ static float Serialplot_Parse_Float(const uint8_t *Data, uint16_t Start, uint16_
 }
 
 /**
- * @brief 串口绘图初始化
+ * @brief Vofa+ UART初始化
  * @param huart UART句柄
- * @param __Checksum_8 是否开启8位累加和校验
  * @param __Rx_Variable_Assignment_Num 接收变量分配数量
  * @param __Rx_Variable_Assignment_List 接收变量分配列表
- * @param __Data_Type 数据类型
  * @param __Frame_Header 帧头
+ * @param __Frame_Tail justfloat帧尾
  */
-void Class_Serialplot_UART::Init(const UART_HandleTypeDef *huart,
-                                 const Enum_Serialplot_Checksum_8 &__Checksum_8,
-                                 const uint8_t &__Rx_Variable_Assignment_Num,
-                                 const char **__Rx_Variable_Assignment_List,
-                                 const Enum_Serialplot_Data_Type &__Data_Type,
-                                 const uint8_t &__Frame_Header)
+void Class_VofaSum8_UART::Init(const UART_HandleTypeDef *huart,
+                               const uint8_t &__Rx_Variable_Assignment_Num,
+                               const char **__Rx_Variable_Assignment_List,
+                               const uint8_t &__Frame_Header,
+                               const uint32_t &__Frame_Tail)
 {
     UART_Manage_Object = nullptr;
 
@@ -155,14 +160,12 @@ void Class_Serialplot_UART::Init(const UART_HandleTypeDef *huart,
         UART_Manage_Object = &UART10_Manage_Object;
     }
 
-    Checksum_8 = __Checksum_8;
     Rx_Variable_Num = __Rx_Variable_Assignment_Num;
     Rx_Variable_List = __Rx_Variable_Assignment_List;
-    Tx_Data_Type = __Data_Type;
     Frame_Header = __Frame_Header;
+    Frame_Tail = __Frame_Tail;
 
-    Tx_Buffer = Serialplot_Tx_Buffer;
-    Tx_Buffer[0] = Frame_Header;
+    Tx_Buffer = VofaSum8_UART_Tx_Buffer;
 }
 
 /**
@@ -170,7 +173,7 @@ void Class_Serialplot_UART::Init(const UART_HandleTypeDef *huart,
  * @param Rx_Data 接收到的数据
  * @param Length 接收到的数据长度
  */
-void Class_Serialplot_UART::UART_RxCpltCallback(const uint8_t *Rx_Data, uint16_t Length)
+void Class_VofaSum8_UART::UART_RxCpltCallback(const uint8_t *Rx_Data, uint16_t Length)
 {
     if (Rx_Data == nullptr || Length == 0)
     {
@@ -183,7 +186,7 @@ void Class_Serialplot_UART::UART_RxCpltCallback(const uint8_t *Rx_Data, uint16_t
 /**
  * @brief 1ms定时器周期发送函数
  */
-void Class_Serialplot_UART::TIM_1ms_Write_PeriodElapsedCallback()
+void Class_VofaSum8_UART::TIM_1ms_Write_PeriodElapsedCallback()
 {
     if (UART_Manage_Object == nullptr || UART_Manage_Object->UART_Handler == nullptr || Tx_Buffer == nullptr)
     {
@@ -196,28 +199,9 @@ void Class_Serialplot_UART::TIM_1ms_Write_PeriodElapsedCallback()
         return;
     }
 
-    uint16_t type_size = Get_Data_Type_Size();
-
-    if (type_size == 0)
-    {
-        return;
-    }
-
-    uint16_t data_length = 1 + Data_Number * type_size;
-
-    if (Checksum_8 == Serialplot_Checksum_8_ENABLE)
-    {
-        data_length += 1;
-    }
-
-    if (data_length > UART_BUFFER_SIZE)
-    {
-        return;
-    }
-
     Output();
 
-    UART_Transmit_Data(UART_Manage_Object->UART_Handler, Tx_Buffer, data_length);
+    UART_Transmit_Data(UART_Manage_Object->UART_Handler, Tx_Buffer, Get_Tx_Length());
 }
 
 /**
@@ -225,7 +209,7 @@ void Class_Serialplot_UART::TIM_1ms_Write_PeriodElapsedCallback()
  * @param Rx_Data 接收到的数据
  * @param Length 数据长度
  */
-void Class_Serialplot_UART::Data_Process(const uint8_t *Rx_Data, uint16_t Length)
+void Class_VofaSum8_UART::Data_Process(const uint8_t *Rx_Data, uint16_t Length)
 {
     uint16_t value_start_index = 0;
 
@@ -246,250 +230,9 @@ void Class_Serialplot_UART::Data_Process(const uint8_t *Rx_Data, uint16_t Length
  * @param value_start_index 值的起始索引
  * @return 指令编号
  */
-int32_t Class_Serialplot_UART::Judge_Variable_Name(const uint8_t *Rx_Data, uint16_t Length, uint16_t *value_start_index)
-{
-    if (Rx_Data == nullptr || Length == 0 || value_start_index == nullptr || Rx_Variable_List == nullptr || Rx_Variable_Num == 0)
-    {
-        return -1;
-    }
-
-    uint16_t equal_index = 0;
-
-    while (equal_index < Length && Rx_Data[equal_index] != '=' && Rx_Data[equal_index] != 0)
-    {
-        equal_index++;
-    }
-
-    if (equal_index >= Length || Rx_Data[equal_index] != '=')
-    {
-        return -1;
-    }
-
-    *value_start_index = equal_index + 1;
-
-    char tmp_variable_name[SERIALPLOT_RX_VARIABLE_ASSIGNMENT_MAX_LENGTH] = {0};
-    uint16_t copy_len = equal_index;
-
-    if (copy_len >= SERIALPLOT_RX_VARIABLE_ASSIGNMENT_MAX_LENGTH)
-    {
-        copy_len = SERIALPLOT_RX_VARIABLE_ASSIGNMENT_MAX_LENGTH - 1;
-    }
-
-    memcpy(tmp_variable_name, Rx_Data, copy_len);
-    tmp_variable_name[copy_len] = '\0';
-
-    for (uint8_t i = 0; i < Rx_Variable_Num; i++)
-    {
-        if (Rx_Variable_List[i] == nullptr)
-        {
-            continue;
-        }
-
-        if (strcmp(tmp_variable_name, Rx_Variable_List[i]) == 0)
-        {
-            return i;
-        }
-    }
-
-    return -1;
-}
-
-/**
- * @brief 判断接收指令值
- * @param Rx_Data 接收到的数据
- * @param Length 数据长度
- * @param value_start_index 值的起始索引
- */
-void Class_Serialplot_UART::Judge_Variable_Value(const uint8_t *Rx_Data, uint16_t Length, uint16_t value_start_index)
-{
-    if (Rx_Data == nullptr || value_start_index >= Length)
-    {
-        Variable_Value = 0.0f;
-        return;
-    }
-
-    uint16_t end_index = value_start_index;
-
-    while (end_index < Length && Rx_Data[end_index] != '#' && Rx_Data[end_index] != 0)
-    {
-        end_index++;
-    }
-
-    Variable_Value = Serialplot_Parse_Float(Rx_Data, value_start_index, end_index);
-}
-
-/**
- * @brief 输出数据
- */
-void Class_Serialplot_UART::Output()
-{
-    if (Tx_Buffer == nullptr)
-    {
-        return;
-    }
-
-    memset(Tx_Buffer, 0, UART_BUFFER_SIZE);
-
-    Tx_Buffer[0] = Frame_Header;
-
-    uint16_t type_size = Get_Data_Type_Size();
-    uint16_t data_size = Data_Number * type_size;
-    uint16_t total_size = 1 + data_size + ((Checksum_8 == Serialplot_Checksum_8_ENABLE) ? 1 : 0);
-
-    if (type_size == 0 || total_size > UART_BUFFER_SIZE)
-    {
-        return;
-    }
-
-    for (uint8_t i = 0; i < Data_Number; i++)
-    {
-        if (Data[i] == nullptr)
-        {
-            continue;
-        }
-
-        memcpy(Tx_Buffer + 1 + i * type_size, Data[i], type_size);
-    }
-
-    if (Checksum_8 == Serialplot_Checksum_8_ENABLE)
-    {
-        Tx_Buffer[1 + data_size] = Serialplot_Sum_8(Tx_Buffer + 1, data_size);
-    }
-}
-
-/**
- * @brief 获取数据类型大小
- * @return 数据类型大小
- */
-uint16_t Class_Serialplot_UART::Get_Data_Type_Size() const
-{
-    switch (Tx_Data_Type)
-    {
-    case Serialplot_Data_Type_UINT8:
-    case Serialplot_Data_Type_INT8:
-        return sizeof(uint8_t);
-
-    case Serialplot_Data_Type_UINT16:
-    case Serialplot_Data_Type_INT16:
-        return sizeof(uint16_t);
-
-    case Serialplot_Data_Type_UINT32:
-    case Serialplot_Data_Type_INT32:
-    case Serialplot_Data_Type_FLOAT:
-        return sizeof(uint32_t);
-
-    case Serialplot_Data_Type_DOUBLE:
-        return sizeof(uint64_t);
-
-    default:
-        return 0;
-    }
-}
-
-/**
- * @brief USB串口绘图初始化
- * @param __Checksum_8 是否开启8位累加和校验
- * @param __Rx_Variable_Assignment_Num 接收变量分配数量
- * @param __Rx_Variable_Assignment_List 接收变量分配列表
- * @param __Data_Type 数据类型
- * @param __Frame_Header 帧头
- */
-void Class_Serialplot_USB::Init(const Enum_Serialplot_Checksum_8 &__Checksum_8,
-                                const uint8_t &__Rx_Variable_Assignment_Num,
-                                const char **__Rx_Variable_Assignment_List,
-                                const Enum_Serialplot_Data_Type &__Data_Type,
-                                const uint8_t &__Frame_Header)
-{
-    Checksum_8 = __Checksum_8;
-    Rx_Variable_Num = __Rx_Variable_Assignment_Num;
-    Rx_Variable_List = __Rx_Variable_Assignment_List;
-    Tx_Data_Type = __Data_Type;
-    Frame_Header = __Frame_Header;
-
-    // USB和UART共用Serialplot发送缓冲区, 不再额外开辟USB发送缓冲区
-    Tx_Buffer = Serialplot_Tx_Buffer;
-    Tx_Buffer[0] = Frame_Header;
-}
-
-/**
- * @brief USB接收完成回调函数
- * @param Rx_Data 接收到的数据
- * @param Length 接收到的数据长度
- */
-void Class_Serialplot_USB::USB_RxCpltCallback(const uint8_t *Rx_Data, uint16_t Length)
-{
-    if (Rx_Data == nullptr || Length == 0)
-    {
-        return;
-    }
-
-    Data_Process(Rx_Data, Length);
-}
-
-/**
- * @brief 1ms定时器周期发送函数
- */
-void Class_Serialplot_USB::TIM_1ms_Write_PeriodElapsedCallback()
-{
-    if (Tx_Buffer == nullptr)
-    {
-        return;
-    }
-
-    uint16_t type_size = Get_Data_Type_Size();
-
-    if (type_size == 0)
-    {
-        return;
-    }
-
-    uint16_t data_length = 1 + Data_Number * type_size;
-
-    if (Checksum_8 == Serialplot_Checksum_8_ENABLE)
-    {
-        data_length += 1;
-    }
-
-    // 注意: 这里用UART_BUFFER_SIZE, 因为实际共用的是Serialplot_Tx_Buffer[UART_BUFFER_SIZE]
-    if (data_length > UART_BUFFER_SIZE)
-    {
-        return;
-    }
-
-    Output();
-
-    USB_Transmit_Data(Tx_Buffer, data_length);
-}
-
-/**
- * @brief 数据处理函数
- * @param Rx_Data 接收到的数据
- * @param Length 数据长度
- */
-void Class_Serialplot_USB::Data_Process(const uint8_t *Rx_Data, uint16_t Length)
-{
-    uint16_t value_start_index = 0;
-
-    Variable_Index = Judge_Variable_Name(Rx_Data, Length, &value_start_index);
-
-    if (Variable_Index < 0)
-    {
-        return;
-    }
-
-    Judge_Variable_Value(Rx_Data, Length, value_start_index);
-}
-
-/**
- * @brief 判断接收指令名称
- * @param Rx_Data 接收到的数据
- * @param Length 数据长度
- * @param value_start_index 值的起始索引
- * @return 指令编号
- */
-int32_t Class_Serialplot_USB::Judge_Variable_Name(const uint8_t *Rx_Data,
-                                                  uint16_t Length,
-                                                  uint16_t *value_start_index)
+int32_t Class_VofaSum8_UART::Judge_Variable_Name(const uint8_t *Rx_Data,
+                                                 uint16_t Length,
+                                                 uint16_t *value_start_index)
 {
     if (Rx_Data == nullptr || Length == 0 || value_start_index == nullptr ||
         Rx_Variable_List == nullptr || Rx_Variable_Num == 0)
@@ -511,13 +254,12 @@ int32_t Class_Serialplot_USB::Judge_Variable_Name(const uint8_t *Rx_Data,
 
     *value_start_index = equal_index + 1;
 
-    char tmp_variable_name[SERIALPLOT_RX_VARIABLE_ASSIGNMENT_MAX_LENGTH] = {0};
-
+    char tmp_variable_name[VOFA_SUM8_RX_VARIABLE_ASSIGNMENT_MAX_LENGTH] = {0};
     uint16_t copy_len = equal_index;
 
-    if (copy_len >= SERIALPLOT_RX_VARIABLE_ASSIGNMENT_MAX_LENGTH)
+    if (copy_len >= VOFA_SUM8_RX_VARIABLE_ASSIGNMENT_MAX_LENGTH)
     {
-        copy_len = SERIALPLOT_RX_VARIABLE_ASSIGNMENT_MAX_LENGTH - 1;
+        copy_len = VOFA_SUM8_RX_VARIABLE_ASSIGNMENT_MAX_LENGTH - 1;
     }
 
     memcpy(tmp_variable_name, Rx_Data, copy_len);
@@ -545,9 +287,9 @@ int32_t Class_Serialplot_USB::Judge_Variable_Name(const uint8_t *Rx_Data,
  * @param Length 数据长度
  * @param value_start_index 值的起始索引
  */
-void Class_Serialplot_USB::Judge_Variable_Value(const uint8_t *Rx_Data,
-                                                uint16_t Length,
-                                                uint16_t value_start_index)
+void Class_VofaSum8_UART::Judge_Variable_Value(const uint8_t *Rx_Data,
+                                               uint16_t Length,
+                                               uint16_t value_start_index)
 {
     if (Rx_Data == nullptr || value_start_index >= Length)
     {
@@ -562,32 +304,19 @@ void Class_Serialplot_USB::Judge_Variable_Value(const uint8_t *Rx_Data,
         end_index++;
     }
 
-    Variable_Value = Serialplot_Parse_Float(Rx_Data, value_start_index, end_index);
+    Variable_Value = VofaSum8_Parse_Float(Rx_Data, value_start_index, end_index);
 }
 
 /**
  * @brief 输出数据
  */
-void Class_Serialplot_USB::Output()
+void Class_VofaSum8_UART::Output()
 {
-    if (Tx_Buffer == nullptr)
-    {
-        return;
-    }
+    uint16_t tx_length = Get_Tx_Length();
 
-    // 注意: 这里用UART_BUFFER_SIZE, 因为Tx_Buffer指向的是Serialplot_Tx_Buffer
-    memset(Tx_Buffer, 0, UART_BUFFER_SIZE);
+    memset(Tx_Buffer, 0, tx_length);
 
     Tx_Buffer[0] = Frame_Header;
-
-    uint16_t type_size = Get_Data_Type_Size();
-    uint16_t data_size = Data_Number * type_size;
-    uint16_t total_size = 1 + data_size + ((Checksum_8 == Serialplot_Checksum_8_ENABLE) ? 1 : 0);
-
-    if (type_size == 0 || total_size > UART_BUFFER_SIZE)
-    {
-        return;
-    }
 
     for (uint8_t i = 0; i < Data_Number; i++)
     {
@@ -596,42 +325,193 @@ void Class_Serialplot_USB::Output()
             continue;
         }
 
-        memcpy(Tx_Buffer + 1 + i * type_size, Data[i], type_size);
+        memcpy(Tx_Buffer + 1 + i * sizeof(float), Data[i], sizeof(float));
     }
 
-    if (Checksum_8 == Serialplot_Checksum_8_ENABLE)
-    {
-        Tx_Buffer[1 + data_size] = Serialplot_Sum_8(Tx_Buffer + 1, data_size);
-    }
+    uint16_t tail_index = 1 + Data_Number * sizeof(float);
+    memcpy(Tx_Buffer + tail_index, &Frame_Tail, sizeof(uint32_t));
+
+    Tx_Buffer[tx_length - 1] = VofaSum8_Sum_8(Tx_Buffer, tx_length - 1);
 }
 
 /**
- * @brief 获取数据类型大小
- * @return 数据类型大小
+ * @brief Vofa+ USB初始化
+ * @param __Rx_Variable_Assignment_Num 接收变量分配数量
+ * @param __Rx_Variable_Assignment_List 接收变量分配列表
+ * @param __Frame_Header 帧头
+ * @param __Frame_Tail justfloat帧尾
  */
-uint16_t Class_Serialplot_USB::Get_Data_Type_Size() const
+void Class_VofaSum8_USB::Init(const uint8_t &__Rx_Variable_Assignment_Num,
+                              const char **__Rx_Variable_Assignment_List,
+                              const uint8_t &__Frame_Header,
+                              const uint32_t &__Frame_Tail)
 {
-    switch (Tx_Data_Type)
+    Rx_Variable_Num = __Rx_Variable_Assignment_Num;
+    Rx_Variable_List = __Rx_Variable_Assignment_List;
+    Frame_Header = __Frame_Header;
+    Frame_Tail = __Frame_Tail;
+
+    Tx_Buffer = VofaSum8_USB_Tx_Buffer;
+}
+
+/**
+ * @brief USB接收完成回调函数
+ * @param Rx_Data 接收到的数据
+ * @param Length 接收到的数据长度
+ */
+void Class_VofaSum8_USB::USB_RxCpltCallback(const uint8_t *Rx_Data, uint16_t Length)
+{
+    if (Rx_Data == nullptr || Length == 0)
     {
-        case Serialplot_Data_Type_UINT8:
-        case Serialplot_Data_Type_INT8:
-            return sizeof(uint8_t);
-
-        case Serialplot_Data_Type_UINT16:
-        case Serialplot_Data_Type_INT16:
-            return sizeof(uint16_t);
-
-        case Serialplot_Data_Type_UINT32:
-        case Serialplot_Data_Type_INT32:
-        case Serialplot_Data_Type_FLOAT:
-            return sizeof(uint32_t);
-
-        case Serialplot_Data_Type_DOUBLE:
-            return sizeof(uint64_t);
-
-        default:
-            return 0;
+        return;
     }
+
+    Data_Process(Rx_Data, Length);
+}
+
+/**
+ * @brief 1ms定时器周期发送函数
+ */
+void Class_VofaSum8_USB::TIM_1ms_Write_PeriodElapsedCallback()
+{
+    if (Tx_Buffer == nullptr)
+    {
+        return;
+    }
+
+    Output();
+
+    USB_Transmit_Data(Tx_Buffer, Get_Tx_Length());
+}
+
+/**
+ * @brief 数据处理函数
+ * @param Rx_Data 接收到的数据
+ * @param Length 数据长度
+ */
+void Class_VofaSum8_USB::Data_Process(const uint8_t *Rx_Data, uint16_t Length)
+{
+    uint16_t value_start_index = 0;
+
+    Variable_Index = Judge_Variable_Name(Rx_Data, Length, &value_start_index);
+
+    if (Variable_Index < 0)
+    {
+        return;
+    }
+
+    Judge_Variable_Value(Rx_Data, Length, value_start_index);
+}
+
+/**
+ * @brief 判断接收指令名称
+ * @param Rx_Data 接收到的数据
+ * @param Length 数据长度
+ * @param value_start_index 值的起始索引
+ * @return 指令编号
+ */
+int32_t Class_VofaSum8_USB::Judge_Variable_Name(const uint8_t *Rx_Data,
+                                                uint16_t Length,
+                                                uint16_t *value_start_index)
+{
+    if (Rx_Data == nullptr || Length == 0 || value_start_index == nullptr ||
+        Rx_Variable_List == nullptr || Rx_Variable_Num == 0)
+    {
+        return -1;
+    }
+
+    uint16_t equal_index = 0;
+
+    while (equal_index < Length && Rx_Data[equal_index] != '=' && Rx_Data[equal_index] != 0)
+    {
+        equal_index++;
+    }
+
+    if (equal_index >= Length || Rx_Data[equal_index] != '=')
+    {
+        return -1;
+    }
+
+    *value_start_index = equal_index + 1;
+
+    char tmp_variable_name[VOFA_SUM8_RX_VARIABLE_ASSIGNMENT_MAX_LENGTH] = {0};
+    uint16_t copy_len = equal_index;
+
+    if (copy_len >= VOFA_SUM8_RX_VARIABLE_ASSIGNMENT_MAX_LENGTH)
+    {
+        copy_len = VOFA_SUM8_RX_VARIABLE_ASSIGNMENT_MAX_LENGTH - 1;
+    }
+
+    memcpy(tmp_variable_name, Rx_Data, copy_len);
+    tmp_variable_name[copy_len] = '\0';
+
+    for (uint8_t i = 0; i < Rx_Variable_Num; i++)
+    {
+        if (Rx_Variable_List[i] == nullptr)
+        {
+            continue;
+        }
+
+        if (strcmp(tmp_variable_name, Rx_Variable_List[i]) == 0)
+        {
+            return i;
+        }
+    }
+
+    return -1;
+}
+
+/**
+ * @brief 判断接收指令值
+ * @param Rx_Data 接收到的数据
+ * @param Length 数据长度
+ * @param value_start_index 值的起始索引
+ */
+void Class_VofaSum8_USB::Judge_Variable_Value(const uint8_t *Rx_Data,
+                                              uint16_t Length,
+                                              uint16_t value_start_index)
+{
+    if (Rx_Data == nullptr || value_start_index >= Length)
+    {
+        Variable_Value = 0.0f;
+        return;
+    }
+
+    uint16_t end_index = value_start_index;
+
+    while (end_index < Length && Rx_Data[end_index] != '#' && Rx_Data[end_index] != 0)
+    {
+        end_index++;
+    }
+
+    Variable_Value = VofaSum8_Parse_Float(Rx_Data, value_start_index, end_index);
+}
+
+/**
+ * @brief 输出数据
+ */
+void Class_VofaSum8_USB::Output()
+{
+    uint16_t tx_length = Get_Tx_Length();
+
+    memset(Tx_Buffer, 0, tx_length);
+
+    Tx_Buffer[0] = Frame_Header;
+
+    for (uint8_t i = 0; i < Data_Number; i++)
+    {
+        if (Data[i] == nullptr)
+        {
+            continue;
+        }
+
+        memcpy(Tx_Buffer + 1 + i * sizeof(float), Data[i], sizeof(float));
+    }
+
+    uint16_t tail_index = 1 + Data_Number * sizeof(float);
+    memcpy(Tx_Buffer + tail_index, &Frame_Tail, sizeof(uint32_t));
+
+    Tx_Buffer[tx_length - 1] = VofaSum8_Sum_8(Tx_Buffer, tx_length - 1);
 }
 
 /*----------------------------------------------------------------------------*/

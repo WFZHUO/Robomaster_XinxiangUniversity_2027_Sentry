@@ -19,6 +19,7 @@
 #include "dvc_serialplot.h"
 #include "drv_usb.h"
 #include "dvc_vofa.h"
+#include "alg_waveform.h"
 
 /* Macros --------------------------------------------------------------------*/
 
@@ -38,12 +39,15 @@ const char *Vofa_Rx_List[] =
     "d",
     "fre",
 };
+// Vofa测试用变量
+float p,i,d,fre = 1.0f;
+
+// 波形发生器
+Class_Waveform Waveform_Sine;
+float Waveform_Sine_Out;
 
 // 全局初始化完成标志位
 bool init_finished = false;
-
-// Vofa测试用变量
-float p,i,d,fre;
 
 /* Function prototypes -------------------------------------------------------*/
 
@@ -104,6 +108,9 @@ void Task1ms_Callback()
     }
     Class_ArkKey::ClearAllFlags();
     
+    // 更新波形
+    Waveform_Sine_Out = Waveform_Sine.Update();
+
     // Vofa
     if(fre == 1.0f) // 根据fre的值来控制是否开启Vofa的1ms周期发送, 以节省资源
     {
@@ -151,7 +158,16 @@ void Task_Init()
     Key.Init(GPIOA, GPIO_PIN_15);
     // 初始化Vofa
     Vofa.Init(4, Vofa_Rx_List);
-    Vofa.Set_Data(4, &p, &i, &d, &fre);
+    Vofa.Set_Data(5,
+                &p,
+                &i,
+                &d,
+                &fre,
+                &Waveform_Sine_Out);
+
+    // 初始化波形
+    Waveform_Sine.Init();
+    Waveform_Sine.Sine(1.0f, 1.0f);
 
     // 初始化USB
     USB_Init(USB0_Callback);

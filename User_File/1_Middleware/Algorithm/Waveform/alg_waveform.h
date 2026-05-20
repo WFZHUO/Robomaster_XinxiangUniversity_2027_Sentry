@@ -38,10 +38,10 @@ typedef enum
     Waveform_Type_SINE,       // 正弦
     Waveform_Type_TRIANGLE,   // 三角波
     Waveform_Type_SAW,        // 锯齿波
-    Waveform_Type_RAMP,       // 斜坡（线性爬升，可循环）
-    Waveform_Type_PULSE,      // 脉冲（周期+宽度）
+    Waveform_Type_RAMP,       // 斜坡
+    Waveform_Type_PULSE,      // 脉冲
     Waveform_Type_DOUBLET,    // 双脉冲（+A -> 0 -> -A，可选末尾0）
-    Waveform_Type_CHIRP,      // 扫频正弦（f0->f1）
+    Waveform_Type_CHIRP,      // 扫频正弦
     Waveform_Type_PRBS,       // 伪随机二进制序列（±A）
     Waveform_Type_NOISE,      // 近似白噪声
     Waveform_Type_RELAY,      // 继电器激励（需要反馈输入）

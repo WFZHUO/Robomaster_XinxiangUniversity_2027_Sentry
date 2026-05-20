@@ -20,6 +20,7 @@
 #include "drv_usb.h"
 #include "dvc_vofa.h"
 #include "alg_waveform.h"
+#include "drv_can.h"
 
 /* Macros --------------------------------------------------------------------*/
 
@@ -94,6 +95,17 @@ void USB0_Callback(uint8_t *Buffer, uint32_t Length)
 }
 
 /**
+ * @brief CAN1任务回调函数
+ *
+ * @param Header 接收帧头
+ * @param Buffer 接收数据缓冲区
+ */
+void CAN1_Callback(FDCAN_RxHeaderTypeDef &Header, uint8_t *Buffer)
+{
+    HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_15);
+}
+
+/**
  * @brief 1ms定时器回调函数
  */
 void Task1ms_Callback()
@@ -164,19 +176,19 @@ void Task_Init()
                 &d,
                 &fre,
                 &Waveform_Sine_Out);
-
     // 初始化波形
     Waveform_Sine.Init();
     Waveform_Sine.Sine(1.0f, 1.0f);
 
     // 初始化USB
     USB_Init(USB0_Callback);
-
     // 初始化TIM
     TIM_Init(&htim7, Task1ms_Callback);
     TIM_Init(&htim5, Task3600s_Callback);
     // 初始化UART
     UART_Init(&huart1, UART1_Callback);
+    // 初始化CAN
+    CAN_Init(&hfdcan1, CAN1_Callback);
 
     // 定时器中断初始化
     HAL_TIM_Base_Start_IT(&htim7);
@@ -195,7 +207,7 @@ void Task_Loop()
 
     if (played == false)
     {
-        // BuzzerSongs_Play_Gala_You();
+        BuzzerSongs_Play_Godfather();
         played = true;
     }
 }

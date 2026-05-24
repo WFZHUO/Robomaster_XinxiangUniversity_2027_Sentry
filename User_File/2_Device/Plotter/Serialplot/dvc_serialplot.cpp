@@ -101,6 +101,7 @@ static float Serialplot_Parse_Float(const uint8_t *Data, uint16_t Start, uint16_
 
 /**
  * @brief 串口绘图初始化
+ *
  * @param huart UART句柄
  * @param __Checksum_8 是否开启8位累加和校验
  * @param __Rx_Variable_Assignment_Num 接收变量分配数量
@@ -388,15 +389,16 @@ uint16_t Class_Serialplot_UART::Get_Data_Type_Size() const
 
 /**
  * @brief USB串口绘图初始化
- * @param __Checksum_8 是否开启8位累加和校验
+ *
  * @param __Rx_Variable_Assignment_Num 接收变量分配数量
  * @param __Rx_Variable_Assignment_List 接收变量分配列表
+ * @param __Checksum_8 是否开启8位累加和校验
  * @param __Data_Type 数据类型
  * @param __Frame_Header 帧头
  */
-void Class_Serialplot_USB::Init(const Enum_Serialplot_Checksum_8 &__Checksum_8,
-                                const uint8_t &__Rx_Variable_Assignment_Num,
+void Class_Serialplot_USB::Init(const uint8_t &__Rx_Variable_Assignment_Num,
                                 const char **__Rx_Variable_Assignment_List,
+                                const Enum_Serialplot_Checksum_8 &__Checksum_8,
                                 const Enum_Serialplot_Data_Type &__Data_Type,
                                 const uint8_t &__Frame_Header)
 {

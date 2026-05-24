@@ -1,40 +1,37 @@
-# 27赛季库代码风格规范
+# 27赛季设备库代码编写规范
 
-> 本文档用于统一 27 赛季哨兵工程后续库文件的**注释、命名、声明、定义、文件组织和分层边界**。  
+> 本规范以 `dvc_motor_dji.h/.cpp` 当前风格为基准。后续新增 Device 层设备库、驱动适配库、控制型设备类，优先按本文档执行。  
+> 目标不是写成“最复杂的规范”，而是让所有库看起来像同一个人、同一个赛季、同一个工程写出来的。
 
 ---
 
 ## 0. 总原则
 
-1. **统一优先于完美**：已有模块已经形成的风格，除非明显错误，否则后续尽量保持一致。
-2. **接口清楚，内部简洁**：`h` 文件说明“怎么调用”，`cpp/c` 文件说明“怎么实现”。
-3. **注释解释意图，不翻译代码**：不要写代码本身已经能看懂的废话注释。
-4. **底层库只做底层的事**：Driver 不解析协议，BSP 不写任务逻辑，Device 不直接处理 HAL 中断。高内聚，低耦合
+1. **风格统一优先**：后续新增库优先模仿 `dvc_motor_dji` 的文件结构、命名、注释和函数组织方式。
+2. **接口清楚，内部稳定**：`.h` 文件放对外类型、类声明、函数声明和简单 `inline`；`.cpp` 文件放具体实现。
+3. **注释说明职责和意图**：注释用中文，解释“这个变量/函数承担什么职责”，不写大段学习笔记。
+4. **Device 层只做设备层的事**：Device 层可以解析协议、维护设备状态、做离线检测和基础控制接口；不要写整车业务状态机。
+5. **能防低级错误，但不无限防御**：空指针、非法外设、非法参数要保护；极低概率边界不要把库写复杂。
 
 ---
 
 ## 1. 文件组织规范
 
-### 1.1 头文件 `.h` 基本结构
+### 1.1 头文件 `.h` 结构
+
+头文件统一使用以下结构：
 
 ```cpp
 /**
- * @file xxx_xxx.h
+ * @file dvc_xxx.h
  * @author WangFonzhuo
- * @brief XXX
+ * @brief XXX的配置与操作
  * @version 1.0
  * @date 2026-xx-xx 27赛季
  */
 
-#ifndef XXX_XXX_H
-#define XXX_XXX_H
-
-/*
-根据需求加
-#ifdef __cplusplus
-extern "C" {
-#endif
-*/
+#ifndef DVC_XXX_H
+#define DVC_XXX_H
 
 /* Includes ------------------------------------------------------------------*/
 
@@ -48,39 +45,38 @@ extern "C" {
 
 /* Exported function definitions ---------------------------------------------*/
 
-/*
-根据需求加
-#ifdef __cplusplus
-}
 #endif
-*/
-
-#endif /* XXX_XXX_H */
 
 /*----------------------------------------------------------------------------*/
 ```
 
 规则：
 
-1. 即使某些区块暂时不用，也保留区块标题。
-2. `Exported function definitions` 只放简单 `inline` 函数、模板函数或必须放在头文件中的实现。
-3. C++ 工程中只有需要被 C 文件调用的头文件，才加 `extern "C"`。
-4. 不要在头文件中包含不必要的外部库，避免外部文件被迫引入过多依赖。
+1. 区块标题即使为空，也保留。
+2. `Includes` 放对外接口必须依赖的头文件。
+3. `Exported types` 放 `enum`、`struct`、`class`。
+4. `Exported function prototypes` 放普通对外函数声明。
+5. `Exported function definitions` 只放 `inline` getter/setter 或必须在头文件实现的小函数。
+6. 不需要 C 调用的 C++ 头文件，不加 `extern "C"`。
 
 ---
 
-### 1.2 源文件 `.cpp/.c` 基本结构
+### 1.2 源文件 `.cpp` 结构
+
+源文件统一使用以下结构：
 
 ```cpp
 /**
- * @file xxx_xxx.cpp
+ * @file dvc_xxx.cpp
  * @author WangFonzhuo
- * @brief XXX
+ * @brief XXX的配置与操作
  * @version 1.0
  * @date 2026-xx-xx 27赛季
  */
 
 /* Includes ------------------------------------------------------------------*/
+
+#include "dvc_xxx.h"
 
 /* Macros --------------------------------------------------------------------*/
 
@@ -97,960 +93,1268 @@ extern "C" {
 
 规则：
 
-1. 即使某些区块暂时不用，也保留区块标题。
-2. `static` 私有函数原型放在 `Function prototypes` 区。
-3. 私有宏、私有类型、私有变量优先放在源文件，不污染头文件。
-4. 某个库如果不是对外接口必须依赖，只在源文件中 `#include`。
+1. `.cpp` 必须先 include 自己的 `.h`。
+2. 只在内部实现中使用的头文件，放 `.cpp` 中。
+3. 全局缓存、全局管理对象放在 `Variables` 区。
+4. `static` 私有函数原型放在 `Function prototypes` 区。
+5. 所有函数定义放在 `Function definitions` 区。
 
 ---
 
-## 2. 命名风格规范
+## 2. 文件命名规范
 
-### 2.1 文件命名
+文件名按工程层级统一：
 
 ```text
-drv_xxx.h / drv_xxx.cpp      Driver 层，HAL 外设封装
+drv_xxx.h / drv_xxx.cpp      Driver 层，外设通用封装
 bsp_xxx.h / bsp_xxx.cpp      BSP 层，板级硬件支持
-alg_xxx.h / alg_xxx.cpp      Algorithm 层，算法库
-dvc_xxx.h / dvc_xxx.cpp      Device 层，具体设备协议
+alg_xxx.h / alg_xxx.cpp      Algorithm 层，算法工具
 sys_xxx.h / sys_xxx.cpp      System 层，系统级工具
-...
+dvc_xxx.h / dvc_xxx.cpp      Device 层，具体设备协议和状态维护
+```
+
+Device 层示例：
+
+```text
+dvc_motor_dji.h
+dvc_motor_dji.cpp
+dvc_referee.h
+dvc_referee.cpp
+dvc_dr16.h
+dvc_dr16.cpp
+```
+
+规则：
+
+1. 一个设备库使用一组 `.h/.cpp`。
+2. 文件名使用小写字母和下划线。
+3. 文件名表达设备类型，不表达临时测试目的。
+4. 临时测试文件不要提交到正式库目录。
+
+---
+
+## 3. 类型命名规范
+
+### 3.1 枚举
+
+格式：
+
+```cpp
+enum Enum_模块名_用途
+{
+    模块名_用途_枚举项 = 0,
+    模块名_用途_枚举项,
+};
 ```
 
 示例：
 
-```text
-drv_uart.h
-drv_can.h
-bsp_buzzer.h
-alg_waveform.h
-dvc_serialplot.h
-sys_timestamp.h
-```
-
----
-
-### 2.2 类型命名
-
 ```cpp
-Struct_UART_Manage_Object
-Class_ArkKey
-Enum_Buzzer_Status
-Namespace_SYS_Timestamp
+/**
+ * @brief 电机控制方式
+ */
+enum Enum_Motor_DJI_Control_Method
+{
+    Motor_DJI_Control_Method_CURRENT = 0,
+    Motor_DJI_Control_Method_OMEGA,
+    Motor_DJI_Control_Method_ANGLE,
+};
 ```
 
 规则：
 
-```text
-结构体：Struct_模块名_用途
-类：Class_模块名
-枚举：Enum_模块名_用途
-命名空间：Namespace_模块名
-```
+1. 枚举类型以 `Enum_` 开头。
+2. 枚举项必须带模块前缀，避免全局命名冲突。
+3. 第一个枚举项显式赋值为 `0`。
+4. 如果存在未初始化状态，使用 `UNDEFINED`。
+5. 枚举项含义清楚时，不需要逐项注释。
 
 ---
 
-### 2.3 函数命名
+### 3.2 结构体
+
+格式：
 
 ```cpp
-UART_Init()
-UART_Reinit()
-UART_Transmit_Data()
-
-CAN_Init()
-CAN_Transmit_Data()
-
-TIM_Init()
+struct Struct_模块名_用途
+{
+    成员变量;
+};
 ```
-
-规则：
-
-1. 使用“模块名前缀 + 动作”。
-2. 模块名与动作之间用下划线连接。
-3. 单词首字母大写。
-4. 不使用过短或含义不明确的函数名。
-
----
-
-### 2.4 变量命名
-
-```cpp
-UART1_Manage_Object
-Rx_Buffer_Active
-Rx_Buffer_Ready
-Rx_Time_Stamp
-Callback_Function
-```
-
-规则：
-
-1. 全局管理对象：`模块号 + _Manage_Object`。
-2. 回调函数指针：`Callback_Function`。
-3. 接收缓冲区统一用 `Rx_Buffer`。
-4. 发送缓冲区统一用 `Tx_Buffer`。
-5. 时间戳统一用 `Time_Stamp` 或 `Timestamp`，同一文件内必须统一。
-6. 变量名优先表达用途，不为了缩短而牺牲可读性。
-
----
-
-## 3. Include 与 extern 规范
-
-### 3.1 Include 放置原则
-
-1. 对外接口必须使用的类型，对应头文件可以放在 `.h` 中。
-2. 只在内部实现中使用的库，放在 `.cpp/.c` 中。
-3. 不要因为某个源文件需要，就把 include 提前放进公共头文件。
-4. 避免头文件层层包含导致编译依赖臃肿。
-5. 用到哪个库就直接include那个库，不要间接通过别的库省事引入那个库，特殊情况除外。
 
 示例：
 
 ```cpp
-// h 文件中确实需要 UART_HandleTypeDef 时才包含
-#include "usart.h"
-```
-
-```cpp
-// 只在源文件内部使用时，放在 cpp/c 文件中
-#include "sys_timestamp.h"
-```
-
----
-
-### 3.2 extern 变量规范
-
-可以放在头文件中的 `extern`：
-
-```cpp
-// 声明UART管理对象
-extern struct Struct_UART_Manage_Object UART1_Manage_Object;
-```
-
-适用情况：
-
-1. 该变量是模块允许外部访问的管理对象。
-2. 外部文件确实需要读取或传递该对象。
-3. 该变量属于模块公开接口的一部分。
-
-不建议放在头文件中的 `extern`：
-
-```cpp
-extern bool init_finished;
+/**
+ * @brief 电机经过处理的数据
+ */
+struct Struct_Motor_DJI_Rx_Data
+{
+    float Now_Angle;
+    float Now_Omega;
+    float Now_Current;
+    float Now_Temperature;
+    float Now_Power;
+    uint16_t Now_Encoder;
+    uint16_t Pre_Encoder;
+    int64_t Total_Encoder;
+    int32_t Total_Round;
+    bool Encoder_Init_Flag;
+};
 ```
 
 规则：
 
-1. 只是源文件内部借用的变量，原则上优先放在 `.cpp/.c` 中。
-2. 如果多个 Driver 已经采用同一风格，可以暂时保持一致。
-3. 后续要重构时，再集中迁移，不要单独改一个模块造成风格割裂。
+1. 结构体以 `Struct_` 开头。
+2. 原始协议帧结构体可以使用 `__attribute__((packed))`。
+3. 处理后的业务数据结构体不随便加 `packed`。
+4. 成员变量使用首字母大写的单词组合。
+5. 当前值用 `Now_`，上一时刻用 `Pre_`，累计值用 `Total_`，标志位用 `_Flag`。
 
 ---
 
-## 4. 注释总规则
+### 3.3 类
 
-### 4.1 推荐注释
-
-推荐解释“为什么这么做”或“这段代码承担什么职责”。
+格式：
 
 ```cpp
-// 初始化未完成时也要清空FIFO, 防止FIFO满
+/**
+ * @brief XXX设备类
+ */
+class Class_模块名
+{
+public:
+
+protected:
+
+};
 ```
+
+示例：
 
 ```cpp
-// 双缓冲适配的缓冲区 以及 当前激活的缓冲区
+/**
+ * @brief GM6020无刷电机
+ */
+class Class_Motor_DJI_GM6020
+{
+public:
+    // PID角度环控制
+    Class_PID PID_Angle;
+
+    // PID角速度环控制
+    Class_PID PID_Omega;
+
+protected:
+    // 绑定的CAN管理对象
+    Struct_CAN_Manage_Object *CAN_Manage_Object = nullptr;
+};
 ```
 
-```cpp
-// 接收时间戳
-```
+规则：
 
-这些注释说明了工程意图，是有价值的。
+1. 类名以 `Class_` 开头。
+2. Device 类命名优先表达设备型号或协议对象。
+3. 类内先写 `public`，再写 `protected`。
+4. 没有必要时不强行写 `private`。
+5. 对外可调的 PID 或配置对象可以放在 `public` 前部。
+6. 内部状态、缓存指针、协议数据、私有函数放在 `protected`。
 
 ---
 
-### 4.2 不推荐注释
+## 4. 函数命名规范
 
-不推荐翻译代码本身。
+### 4.1 普通模块函数
 
-```cpp
-// 判断huart是不是USART1
-if (huart->Instance == USART1)
-```
+格式：
 
 ```cpp
-// 返回空指针
-return nullptr;
+模块名_动作_补充说明()
 ```
 
-这种代码本身已经很明显，不需要注释。
+示例：
+
+```cpp
+CAN_Transmit_Data();
+Motor_DJI_CAN_Tx_PeriodElapsedCallback();
+```
+
+规则：
+
+1. 函数名使用大驼峰单词 + 下划线分隔。
+2. 模块名放前面。
+3. 动作表达清楚，不为了短而牺牲可读性。
+4. 周期任务函数可以使用 `PeriodElapsedCallback`。
+5. 接收完成函数可以使用 `RxCpltCallback`。
 
 ---
 
-### 4.3 注释语言
+### 4.2 类成员函数
+
+Device 类成员函数优先使用以下命名：
+
+```cpp
+Init();
+CAN_RxCpltCallback();
+TIM_100ms_Alive_PeriodElapsedCallback();
+TIM_Calculate_PeriodElapsedCallback();
+Data_Process();
+PID_Calculate();
+Output();
+Clean_Output();
+```
+
+规则：
+
+1. 初始化函数统一叫 `Init()`。
+2. CAN 接收完成处理统一叫 `CAN_RxCpltCallback()`。
+3. 定时器周期函数统一使用 `TIM_xxx_PeriodElapsedCallback()`。
+4. 数据解析过程叫 `Data_Process()`。
+5. 控制计算叫 `PID_Calculate()` 或 `Control_Calculate()`。
+6. 写入发送缓存叫 `Output()`。
+7. 清空输出叫 `Clean_Output()`。
+
+---
+
+### 4.3 Getter / Setter
+
+Getter：
+
+```cpp
+inline float Get_Now_Angle() const;
+inline Enum_Motor_DJI_Status Get_Status() const;
+```
+
+Setter：
+
+```cpp
+inline void Set_Target_Angle(float __Target_Angle);
+inline void Set_Control_Method(Enum_Motor_DJI_Control_Method __Control_Method);
+```
+
+规则：
+
+1. Getter 使用 `Get_` 前缀。
+2. Setter 使用 `Set_` 前缀。
+3. Getter 必须加 `const`，除非函数确实会改变对象状态。
+4. Getter/Setter 简单函数在头文件底部实现为 `inline`。
+5. 参数使用 `__` 前缀，避免和成员变量重名。
+6. Getter 返回值保持当前库风格：`return (Value);`。
+
+示例：
+
+```cpp
+/**
+ * @brief 获取当前角速度, rad/s
+ *
+ * @return float 当前角速度
+ */
+inline float Class_Motor_DJI_C620::Get_Now_Omega() const
+{
+    return (Rx_Data.Now_Omega);
+}
+```
+
+---
+
+## 5. 变量命名规范
+
+### 5.1 全局变量
+
+全局缓存按设备编号、帧 ID、用途命名：
+
+```cpp
+uint8_t CAN1_0x1fe_Tx_Data[8];
+uint8_t CAN1_0x200_Tx_Data[8];
+uint8_t CAN2_0x1ff_Tx_Data[8];
+```
+
+规则：
+
+1. CAN 缓存格式：`CAN编号_帧ID_方向_Data`。
+2. 接收用 `Rx_Data`，发送用 `Tx_Data`。
+3. 全局变量只用于模块级共享状态或发送缓存。
+4. 不要把任务层临时变量放到设备库全局变量区。
+
+---
+
+### 5.2 成员变量
+
+常见成员变量命名：
+
+```cpp
+CAN_Manage_Object
+CAN_Rx_ID
+Tx_Data
+Encoder_Offset
+Motor_Status
+Rx_Data
+Control_Method
+Target_Angle
+Feedforward_Current
+Now_External_Angle
+External_Angle_Flag
+```
+
+规则：
+
+1. 成员变量使用首字母大写的单词组合。
+2. 指针变量不强制加 `p` 前缀，变量名表达对象即可。
+3. 目标值使用 `Target_`。
+4. 前馈值使用 `Feedforward_`。
+5. 外部反馈值使用 `Now_External_`。
+6. 标志位使用 `_Flag`。
+7. 状态枚举变量使用 `Status` 或 `Motor_Status` 这类清楚名字。
+
+---
+
+### 5.3 常量成员
+
+类内固定参数使用 `const` 成员：
+
+```cpp
+const uint16_t ENCODER_NUM_PER_ROUND = 8192U;
+const float CURRENT_TO_OUT = 16384.0f / 20.0f;
+const float THEORETICAL_OUTPUT_CURRENT_MAX = 16384.0f;
+```
+
+规则：
+
+1. 固定转换系数使用全大写和下划线。
+2. 物理单位写在注释里。
+3. 浮点常量加 `.0f` 或 `f` 后缀。
+4. 无符号整数加 `U` 后缀。
+5. 不在函数里到处写魔法数，优先提成类内常量。
+
+---
+
+## 6. 注释规范
+
+### 6.1 注释语言
 
 1. 注释主体使用中文。
-2. HAL 名称、寄存器名、类型名、函数名保持英文原名。
-3. 不要中英文混乱解释同一个概念。
-4. 专有名词第一次出现可以写“中文 + English”，后续直接用英文名。
-5. 注释尽量短，长篇学习笔记不要塞进代码。
+2. HAL、CAN、PID、Rx、Tx、Callback、ID 等专有词保持英文原名。
+3. 单位写在 `@brief` 或 `@return` 里，例如 `rad/s`、`A`、`W`、`℃`。
+4. 不写大段协议背景，协议说明放文档或手册笔记。
+5. 不写情绪化注释或临时调试说明。
 
 ---
 
-## 5. Doxygen 注释规范
+### 6.2 文件头注释
 
-### 5.1 文件头注释
-
-所有 `.h`、`.cpp`、`.c` 文件顶部保留文件头注释。
+每个 `.h/.cpp` 顶部必须有文件头：
 
 ```cpp
 /**
- * @file drv_uart.cpp
+ * @file dvc_motor_dji.cpp
  * @author WangFonzhuo
- * @brief UART通用驱动
+ * @brief DJI电机的配置与操作
  * @version 1.0
- * @date 2026-xx-xx 27赛季
+ * @date 2026-05-22 27赛季
  */
 ```
 
 规则：
 
-1. `@brief` 写清楚该文件职责。
-2. 不在文件头写大段协议背景。
-3. 重要硬件限制可以用 `@note` 简短说明。
+1. `@file` 和文件名一致。
+2. `@brief` 写该库职责。
+3. `@date` 可以保留多行历史日期，但新文件至少写 27 赛季日期。
+4. 文件头不写大段说明。
 
 ---
 
-### 5.2 宏定义注释
+### 6.3 枚举、结构体、类注释
 
-简单宏：
-
-```cpp
-// 缓冲区字节长度
-#define UART_BUFFER_SIZE 512
-```
-
-```cpp
-#define CAN_RX_BUFFER_SIZE 8
-```
-
-规则：
-
-1. 宏名足够清楚时，可以不写注释。
-2. 简单宏最多写一行说明。
-3. 不要为了形式给每个宏写废话。
-
-复杂宏：
-
-```cpp
-// CAN错误中断集合
-#define CAN_ERROR_INTERRUPTS (FDCAN_IT_ERROR_WARNING      | \
-                              FDCAN_IT_ERROR_PASSIVE      | \
-                              FDCAN_IT_BUS_OFF)
-```
-
-规则：
-
-1. 复杂宏必须说明用途。
-2. 基础库里不要提前加入暂时不用的复杂宏。
-3. 如果宏代表一组硬件标志位，命名要体现集合含义。
-
----
-
-### 5.3 typedef 回调函数注释
-
-参数简单时：
+必须写 `@brief`：
 
 ```cpp
 /**
- * @brief UART通信接收回调函数数据类型
+ * @brief 电机状态
  */
-typedef void (*UART_Callback)(uint8_t *Buffer, uint16_t Length);
+enum Enum_Motor_DJI_Status
+{
+};
 ```
-
-参数容易混淆时：
 
 ```cpp
 /**
- * @brief CAN通信接收回调函数数据类型
+ * @brief 电机经过处理的数据
+ */
+struct Struct_Motor_DJI_Rx_Data
+{
+};
+```
+
+```cpp
+/**
+ * @brief C620无刷电调
+ */
+class Class_Motor_DJI_C620
+{
+};
+```
+
+规则：
+
+1. 类型声明必须写 `@brief`。
+2. 成员变量不用每个都写 Doxygen。
+3. 成员变量分组用 `//` 注释。
+4. 枚举项含义清楚时不逐项注释。
+
+---
+
+### 6.4 函数注释
+
+普通函数定义使用：
+
+```cpp
+/**
+ * @brief 初始化C620无刷电调
  *
- * @param Header 接收帧头
- * @param Buffer 接收数据缓冲区
+ * @param hfdcan CAN编号
+ * @param __CAN_Rx_ID 电机反馈报文ID枚举
+ * @param __Control_Method 电机控制方式
+ * @param __Encoder_Offset 编码器零点偏移
+ * @param __Gearbox_Rate 减速箱减速比
  */
-typedef void (*CAN_Callback)(FDCAN_RxHeaderTypeDef &Header, uint8_t *Buffer);
+void Class_Motor_DJI_C620::Init(FDCAN_HandleTypeDef *hfdcan,
+                                Enum_Motor_DJI_ID __CAN_Rx_ID,
+                                Enum_Motor_DJI_Control_Method __Control_Method,
+                                int32_t __Encoder_Offset,
+                                float __Gearbox_Rate)
+{
+}
+```
+
+有返回值的函数使用：
+
+```cpp
+/**
+ * @brief 估计功率值
+ *
+ * @param Power_Model 功率模型
+ * @param Current 电流值
+ * @param Omega 角速度值
+ * @return float 估计功率值
+ */
+static float power_calculate(const Struct_Motor_DJI_Power_Model *Power_Model, float Current, float Omega)
+{
+}
 ```
 
 规则：
 
-1. 回调函数类型必须写 `@brief`。
-2. 参数简单时可以不展开 `@param`。
-3. 参数含义容易混淆时必须写 `@param`。
-4. 回调函数类型不要设计得过重，基础库只传必要数据。
+1. 函数声明和函数定义都可以写注释，定义处必须写完整。
+2. 有参数写 `@param`。
+3. 有返回值写 `@return`。
+4. 简单回调如果只有一个参数，可以保持紧凑格式。
+5. 不要在 `@brief` 里写太长，复杂解释放函数内部关键位置。
 
 ---
 
-### 5.4 结构体注释
+### 6.5 函数内部注释
+
+推荐写这种注释：
 
 ```cpp
-/**
- * @brief UART通信处理结构体
- */
-struct Struct_UART_Manage_Object
+// 判断该时间段内是否接收过电机数据
+if (Flag == Pre_Flag)
 {
-    UART_HandleTypeDef *UART_Handler;
-    UART_Callback Callback_Function;
+}
+```
 
-    // 双缓冲适配的缓冲区 以及 当前激活的缓冲区
-    uint8_t *Rx_Buffer_0;
-    uint8_t *Rx_Buffer_1;
+```cpp
+// 第一帧只建立编码器基准, 防止Pre_Encoder默认0导致误判跨圈
+if (Rx_Data.Encoder_Init_Flag == false)
+{
+}
+```
 
-    // 正在接收的缓冲区
-    uint8_t *Rx_Buffer_Active;
+```cpp
+// 处理大小端
+Basic_Math_Endian_Reverse_16(...);
+```
 
-    // 接收完毕的缓冲区
-    uint8_t *Rx_Buffer_Ready;
+不推荐写这种注释：
 
-    // 接收时间戳
-    uint64_t Rx_Time_Stamp;
-};
+```cpp
+// 如果hfdcan为空则返回
+if (hfdcan == nullptr)
+{
+    return;
+}
 ```
 
 规则：
 
-1. 结构体必须有 `@brief`。
-2. 成员变量不用每一项都写注释。
-3. 分组成员建议用 `//` 简短说明。
-4. 结构体里不要提前塞暂时不用的状态量。
+1. 关键状态分支要写注释。
+2. 协议解析、跨圈判断、掉线判断、缓冲区分配要写注释。
+3. 空指针判断、普通赋值、简单 return 不写废话注释。
+4. 注释不要比代码还长。
 
 ---
 
-### 5.5 枚举注释
+## 7. Include 规范
 
-普通枚举：
+### 7.1 头文件 include
 
-```cpp
-/**
- * @brief 波形类型
- */
-enum Enum_Waveform_Type
-{
-    Waveform_Type_Sine = 0,
-    Waveform_Type_Square,
-    Waveform_Type_Triangle,
-    Waveform_Type_Sawtooth,
-};
-```
-
-带特殊含义的枚举：
+头文件只包含对外类型必须依赖的头文件：
 
 ```cpp
-/**
- * @brief CAN发送状态
- */
-enum Enum_CAN_Tx_Status
-{
-    CAN_Tx_Status_OK = 0,       // 发送入队成功
-    CAN_Tx_Status_BUSY,         // Tx FIFO/Queue已满
-    CAN_Tx_Status_ERROR,        // 参数错误或HAL执行失败
-};
+#include "alg_pid.h"
+#include "drv_can.h"
 ```
 
 规则：
 
-1. `enum` 必须有 `@brief`。
-2. 枚举项名字清楚时，不需要每项都加注释。
-3. 枚举项含义特殊时，才写行内注释。
-4. 不要为了形式给每一项写废话。
+1. 类成员里用到了某个类型，头文件必须 include 对应头文件。
+2. 只在 `.cpp` 使用的工具函数，不放进 `.h`。
+3. 不依赖间接 include，自己用到什么就 include 什么。
+4. 不为了省事把大量 HAL 头文件塞进 Device 头文件。
 
 ---
 
-### 5.6 类声明注释
+### 7.2 源文件 include
+
+源文件先 include 自己的头文件，再 include 内部实现需要的头文件：
 
 ```cpp
-/**
- * @brief 按键检测类
- */
-class Class_ArkKey
+#include "dvc_motor_dji.h"
+#include "alg_basic.h"
+```
+
+规则：
+
+1. 自己的 `.h` 永远放第一位。
+2. 内部数学、协议工具、HAL 辅助放在后面。
+3. 不使用的 include 要删掉。
+
+---
+
+## 8. 类接口组织顺序
+
+Device 类推荐按以下顺序组织：
+
+```cpp
+class Class_Device
 {
 public:
-    void Init();
+    // 对外可调对象，例如PID
 
-    void Update();
+    // Init
 
-    Enum_ArkKey_Status Get_Status();
+    // Getter
+
+    // Setter
+
+    // 通信接收回调
+
+    // 定时器周期回调
 
 protected:
+    // 绑定对象和通信配置
 
-private:
+    // 固定常量和模型参数
 
+    // 运行状态和接收数据
+
+    // 控制目标和前馈
+
+    // 外部反馈
+
+    // 内部处理函数
 };
 ```
 
 规则：
 
-1. `class` 必须有 `@brief`。
-2. `public/protected/private` 分区保留。
-3. 类内私有函数如果只是声明，可以用 `//` 简短注释。
-4. 复杂函数的详细说明放到 `.cpp` 定义处。
+1. `Init()` 放在 public 函数最前面。
+2. Getter 集中放在 Setter 前面。
+3. 回调函数放在 Getter/Setter 后面。
+4. `protected` 里先放绑定对象和 ID，再放常量，再放运行状态。
+5. 内部函数声明放在 `protected` 最后。
 
 ---
 
-### 5.7 函数声明注释
+## 9. inline 规范
 
-```cpp
-/**
- * @brief 初始化UART
- *
- * @param huart UART编号
- * @param Callback_Function 回调函数
- */
-void UART_Init(UART_HandleTypeDef *huart, UART_Callback Callback_Function);
-```
+### 9.1 什么函数可以 inline
 
-规则：
-
-1. `h` 文件中的普通函数声明必须写完整 Doxygen 注释。
-2. 至少包含 `@brief`。
-3. 有参数就写 `@param`。
-4. 有返回值就写 `@return`。
-
----
-
-### 5.8 函数定义注释
-
-```cpp
-/**
- * @brief UART发送数据
- *
- * @param huart UART编号
- * @param Data 被发送的数据指针
- * @param Length 数据长度
- * @return uint8_t HAL执行状态
- */
-uint8_t UART_Transmit_Data(UART_HandleTypeDef *huart, uint8_t *Data, uint16_t Length)
-{
-    return HAL_UART_Transmit_DMA(huart, Data, Length);
-}
-```
-
-规则：
-
-1. `.cpp/.c` 定义处也要写完整注释。
-2. 不要因为 `h` 文件写过就省略定义处注释。
-3. 简短函数也保留注释，方便从源文件直接阅读。
-4. 必要时对算法进行一定解释
-
----
-
-### 5.9 static 私有函数注释
-
-```cpp
-static Struct_CAN_Manage_Object *CAN_Get_Manage_Object(FDCAN_HandleTypeDef *hfdcan);
-```
-
-规则：
-
-1. `static` 函数原型放在 `Function prototypes` 区。
-2. `static` 函数声明处可以不写 Doxygen 注释。
-3. `static` 函数定义处写完整注释。
-
-定义处示例：
-
-```cpp
-/**
- * @brief 获取CAN管理对象
- *
- * @param hfdcan CAN编号
- * @return Struct_CAN_Manage_Object* CAN管理对象
- */
-static Struct_CAN_Manage_Object *CAN_Get_Manage_Object(FDCAN_HandleTypeDef *hfdcan)
-{
-}
-```
-
----
-
-### 5.10 HAL 回调函数注释
-
-```cpp
-/**
- * @brief HAL库UART接收DMA空闲中断
- *
- * @param huart UART编号
- * @param Size 长度
- */
-void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
-{
-}
-```
-
-```cpp
-/**
- * @brief HAL库CAN接收FIFO0中断
- *
- * @param hfdcan CAN编号
- * @param RxFifo0ITs Rx FIFO0中断标志
- */
-void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
-{
-}
-```
-
-规则：
-
-1. HAL 回调函数必须写完整注释。
-2. `@brief` 格式统一写“HAL库XXX中断”。
-3. 参数名按 HAL 原型，不随意改。
-4. 回调里不要写大量业务逻辑，只做分发、缓存切换、时间戳、调用用户回调。
-
----
-
-## 6. 类内函数与 inline 规范
-
-### 6.1 适合 inline 的函数
-
-适合放在头文件中的函数：
+可以 inline：
 
 ```text
-1. 简单 getter
-2. 简单 setter
-3. 小型数学函数
-4. 小型状态判断函数
-5. 模板函数
+1. Getter
+2. Setter
+3. 简单状态读取
+4. 简单参数设置
 ```
 
-示例：
+不建议 inline：
 
-```cpp
-/**
- * @brief 获取当前输出值
- *
- * @return float 当前输出值
- */
-float Get_Output()
-{
-    return Output;
-}
+```text
+1. Init
+2. CAN_RxCpltCallback
+3. TIM_Calculate_PeriodElapsedCallback
+4. Data_Process
+5. PID_Calculate
+6. Output
+7. Clean_Output
 ```
 
 规则：
 
-1. 简单 getter / setter / 小工具函数可以直接写在 `h` 文件类内。
-2. 如果这个函数是对外高频接口，写完整简洁注释。
+1. `inline` 函数只在头文件底部 `Exported function definitions` 区实现。
+2. 类内只写声明，不在类声明中直接展开实现。
+3. Getter 必须 `const`。
+4. inline 定义处写完整 Doxygen 注释。
 
 ---
 
-### 6.2 不适合 inline 的函数
+## 10. 代码格式规范
 
-不适合放在头文件中的函数：
+### 10.1 缩进与大括号
 
-```text
-1. 调用 HAL 的复杂初始化函数
-2. 中断回调函数
-3. 大型状态机函数
-4. 含较多分支的解析函数
-5. 需要隐藏实现细节的函数
-```
-
-这些函数应放到 `.cpp/.c` 文件中实现。
-
----
-
-### 6.3 类内声明与类外定义的注释分工
-
-头文件中：
+使用 Allman 风格：
 
 ```cpp
-class Class_Waveform
-{
-public:
-    /**
-     * @brief 初始化波形参数
-     *
-     * @param __Frequency 波形频率
-     * @param __Amplitude 波形幅值
-     */
-    void Init(float __Frequency, float __Amplitude);
-
-    /**
-     * @brief 更新函数
-     *
-     * @param __Delta_Time 时间差
-     */
-    void Update(float __Delta_Time);
-
-    /**
-     * @brief 输出
-     *
-     * @return float 当前输出值
-     */
-    float Get_Output();
-
-protected:
-
-private:
-    // 归一化相位到[0, 1)
-    float Wrap_01(float __P);
-
-    // 正取模
-    float Positive_Mod(float __X, float __Modulus);
-
-    // 32位XORSHIFT伪随机数发生器
-    uint32_t XORSHIFT32(uint32_t &__State);
-};
-```
-
-源文件中：
-
-```cpp
-/**
- * @brief 初始化波形参数
- *
- * @param __Frequency 波形频率
- * @param __Amplitude 波形幅值
- */
-void Class_Waveform::Init(float __Frequency, float __Amplitude)
-{
-}
-```
-
-规则：
-
-1. 类内声明可以相对简短。
-2. `.cpp` 定义必须详细。
-3. 参数含义在 `.cpp` 定义处写完整。
-4. `h` 文件不要重复写一大堆和 `.cpp` 完全一样的注释，除非该函数只在 `h` 中实现。
-5. 私有函数在类内可以用 `//` 简短说明，详细注释放在源文件定义处。
-
----
-
-## 7. 函数内部注释规范
-
-### 7.1 推荐写注释的位置
-
-函数内部只在这些位置写注释：
-
-```text
-1. 状态机关键分支
-2. 缓冲区切换
-3. 中断重启接收
-4. 硬件限制相关操作
-5. 防止隐藏 bug 的特殊处理
-6. 初始化未完成时的保护逻辑
-```
-
-示例：
-
-```cpp
-// 判断程序初始化完成
-if (!init_finished)
-{
-    // 重启接收
-    HAL_UARTEx_ReceiveToIdle_DMA(...);
-    return;
-}
-```
-
-```cpp
-// 初始化未完成时也要清空FIFO, 防止FIFO满
-while (HAL_FDCAN_GetRxMessage(...) == HAL_OK)
-{
-}
-```
-
----
-
-### 7.2 不推荐写注释的位置
-
-不写这种注释：
-
-```cpp
-// 如果为空指针则返回
-if (ptr == nullptr)
+if (hfdcan == nullptr)
 {
     return;
 }
-```
-
-```cpp
-// 调用HAL函数发送数据
-HAL_UART_Transmit_DMA(...);
-```
-
-除非这里有特殊原因，否则不要解释代码表面动作。
-
----
-
-## 8. @note / @return / TODO 规范
-
-### 8.1 @note 使用规范
-
-只有这些情况才用 `@note`：
-
-```text
-1. 文件级说明
-2. 函数有重要使用前提
-3. 函数有硬件限制
-4. 函数有时序要求
-5. 需要提醒后续维护者不要误改
-```
-
-示例：
-
-```cpp
-/**
- * @brief 初始化CAN总线
- *
- * @note
- * 1. 调用前需要先完成 MX_FDCANx_Init().
- * 2. 当前版本默认只配置标准帧过滤器.
- *
- * @param hfdcan CAN编号
- * @param Callback_Function 处理回调函数
- */
-void CAN_Init(FDCAN_HandleTypeDef *hfdcan, CAN_Callback Callback_Function);
-```
-
-不推荐把普通流程都写成 `@note`。
-
----
-
-### 8.2 @return 写法规范
-
-如果返回 HAL 状态：
-
-```cpp
-@return uint8_t HAL执行状态
-```
-
-如果返回对象指针：
-
-```cpp
-@return Struct_CAN_Manage_Object* CAN管理对象
-```
-
-如果返回当前值：
-
-```cpp
-@return float 当前输出值
-```
-
-规则：
-
-1. `@return` 后面先写返回类型，再写含义。
-2. 不写“返回值”这种无意义说明。
-3. 返回状态时说明状态来源，比如 HAL 状态、自定义状态、错误码。
-
----
-
-### 8.3 TODO / FIXME 规范
-
-```cpp
-// TODO: 后续增加Bus-Off恢复策略
-```
-
-```cpp
-// FIXME: 当前滤波器配置仅适用于标准帧
-```
-
-规则：
-
-1. `TODO` 表示计划增强。
-2. `FIXME` 表示当前存在问题。
-3. 不要写模糊 TODO。
-4. TODO 后面必须能看懂要做什么。
-5. 能立刻修的小问题不要写 TODO，直接修掉。
-
----
-
-## 9. init_finished 使用规范
-
-```cpp
-// 判断程序初始化完成
-if (!init_finished)
+else
 {
-    // 初始化未完成时只做必要清理或重启接收
     return;
 }
 ```
 
 规则：
 
-1. `init_finished` 只用于防止系统初始化阶段误触发回调。
-2. 初始化未完成时不要进入用户回调。
-3. 初始化未完成时可以做“清 FIFO / 重启接收”这种保护动作。
-4. 不要把 `init_finished` 当作某个驱动自己的 `Init_Finish`。
-5. 如果多个 Driver 已经统一使用该变量，后续保持一致；若要重构，集中处理。
+1. 缩进使用 4 个空格。
+2. 左大括号单独一行。
+3. `if/else/switch/case/for/while` 即使只有一行，也写大括号。
+4. 函数之间空一行。
+5. 逻辑分组之间空一行。
 
 ---
 
-## 10. 分层设计规范
+### 10.2 switch-case
 
-### 10.1 Driver 层规范
+格式：
 
-Driver 层只做：
+```cpp
+switch (Control_Method)
+{
+    case (Motor_DJI_Control_Method_CURRENT):
+    {
+        break;
+    }
+    case (Motor_DJI_Control_Method_OMEGA):
+    {
+        break;
+    }
+    default:
+    {
+        Target_Current = 0.0f;
+
+        break;
+    }
+}
+```
+
+规则：
+
+1. `case` 后的枚举值加括号，保持当前库风格。
+2. 每个 `case` 使用大括号包住。
+3. 每个 `case` 末尾显式 `break`。
+4. 推荐写 `default`，即使正常不会进入。
+
+---
+
+### 10.3 返回值与类型转换
+
+返回值格式保持：
+
+```cpp
+return (Motor_Status);
+return (nullptr);
+```
+
+字节拆分格式保持：
+
+```cpp
+tmp_out = (int16_t)Out;
+
+Tx_Data[0] = (uint8_t)((uint16_t)tmp_out >> 8U);
+Tx_Data[1] = (uint8_t)((uint16_t)tmp_out);
+```
+
+规则：
+
+1. 简单返回值使用 `return (Value);`。
+2. 底层字节处理允许使用当前库的 C 风格强转。
+3. 同一个库中不要混用多种强转风格。
+4. 对有符号输出拆字节时，先转成 `uint16_t` 再移位。
+
+---
+
+## 11. 防御性代码规范
+
+### 11.1 空指针保护
+
+外部传入指针必须保护：
+
+```cpp
+if (hfdcan == nullptr)
+{
+    return;
+}
+```
+
+```cpp
+if (Rx_Data_Buffer == nullptr)
+{
+    return;
+}
+```
+
+规则：
+
+1. `Init()`、回调、数据处理函数要检查外部指针。
+2. 指针非法时直接 `return`。
+3. 不在每个内部成员变量读取前都过度检查。
+
+---
+
+### 11.2 外设实例保护
+
+外设实例按当前库风格处理：
+
+```cpp
+if (hfdcan->Instance == FDCAN1)
+{
+    CAN_Manage_Object = &CAN1_Manage_Object;
+}
+#ifdef FDCAN2
+else if (hfdcan->Instance == FDCAN2)
+{
+    CAN_Manage_Object = &CAN2_Manage_Object;
+}
+#endif
+#ifdef FDCAN3
+else if (hfdcan->Instance == FDCAN3)
+{
+    CAN_Manage_Object = &CAN3_Manage_Object;
+}
+#endif
+else
+{
+    return;
+}
+```
+
+规则：
+
+1. 不同芯片可能没有 FDCAN2/FDCAN3，使用 `#ifdef` 包住。
+2. 未匹配到合法外设时直接 `return`。
+3. 不要让对象半初始化后继续运行。
+
+---
+
+### 11.3 参数边界保护
+
+容易导致除 0 或越界的参数要保护：
+
+```cpp
+if (__Gearbox_Rate > 1.0e-6f)
+{
+    Gearbox_Rate = __Gearbox_Rate;
+}
+```
+
+输出值要限幅：
+
+```cpp
+Basic_Math_Constrain(&Out, -THEORETICAL_OUTPUT_CURRENT_MAX, THEORETICAL_OUTPUT_CURRENT_MAX);
+```
+
+规则：
+
+1. 减速比、比例系数、长度、ID 等参数要做基本保护。
+2. 电机输出必须限幅。
+3. 保护逻辑保持简单，不写复杂异常系统。
+
+---
+
+## 12. Device 层通信与回调规范
+
+### 12.1 接收路径
+
+推荐路径：
 
 ```text
-1. HAL 外设封装
-2. 中断接收
-3. 缓冲区管理
-4. 时间戳记录
-5. 回调分发
-6. 必要的参数检查
+Driver层HAL中断
+    -> Driver层用户回调
+        -> Task层按ID分发
+            -> Device对象.CAN_RxCpltCallback(Buffer)
+                -> Device对象.Data_Process(Buffer)
+```
+
+规则：
+
+1. Device 层不直接写 HAL 中断函数。
+2. Task 层负责按 CAN ID 分发给对应对象。
+3. Device 对象只处理属于自己的反馈数据。
+4. 回调函数里尽量短，只增加 Flag 并调用数据处理。
+
+示例：
+
+```cpp
+void Class_Motor_DJI_C620::CAN_RxCpltCallback(uint8_t *Rx_Data)
+{
+    Flag += 1U;
+    Data_Process(Rx_Data);
+}
+```
+
+---
+
+### 12.2 周期计算路径
+
+推荐路径：
+
+```text
+Task 1ms
+    -> Device.TIM_Calculate_PeriodElapsedCallback()
+    -> Module_CAN_Tx_PeriodElapsedCallback()
+```
+
+规则：
+
+1. 控制计算和 CAN 发送由任务层周期调用。
+2. 同一个发送缓存不要被多个地方同时写。
+3. 发送函数统一发送该模块所有控制帧。
+4. 不要在 Device 层自己启动定时器。
+
+---
+
+### 12.3 离线检测
+
+离线检测推荐使用 `Flag / Pre_Flag`：
+
+```cpp
+// 判断该时间段内是否接收过电机数据
+if (Flag == Pre_Flag)
+{
+    // 电机断开连接
+    Motor_Status = Motor_DJI_Status_DISABLE;
+}
+else
+{
+    // 电机保持连接
+    Motor_Status = Motor_DJI_Status_ENABLE;
+}
+Pre_Flag = Flag;
+```
+
+规则：
+
+1. 接收回调中更新 `Flag`。
+2. 低频定时器中比较 `Flag` 和 `Pre_Flag`。
+3. 掉线时控制计算函数必须清输出。
+4. 需要更高安全性时，可以在离线检测处直接调用 `Clean_Output()`。
+
+---
+
+## 13. 数据处理规范
+
+### 13.1 原始协议数据
+
+原始协议帧使用结构体描述：
+
+```cpp
+struct Struct_Motor_DJI_CAN_Rx_Data
+{
+    uint16_t Encoder;
+    int16_t Omega;
+    int16_t Current;
+    uint8_t Temperature;
+    uint8_t Reserved;
+} __attribute__((packed));
+```
+
+规则：
+
+1. 原始协议帧结构体只描述协议布局。
+2. 原始协议帧字段保持协议名，不强行改成应用层名字。
+3. 大小端处理放在 `Data_Process()`。
+4. 处理后的数据写入 `Rx_Data`。
+
+---
+
+### 13.2 处理后数据
+
+处理后的数据统一放入 `Rx_Data`：
+
+```cpp
+Rx_Data.Now_Angle = ...;
+Rx_Data.Now_Omega = ...;
+Rx_Data.Now_Current = ...;
+Rx_Data.Now_Temperature = ...;
+Rx_Data.Now_Power = ...;
+```
+
+规则：
+
+1. 对外 getter 只从 `Rx_Data` 或成员变量返回。
+2. 角度统一用 `rad`。
+3. 角速度统一用 `rad/s`。
+4. 电流统一用 `A`。
+5. 温度统一用 `℃`。
+6. 功率统一用 `W`。
+
+---
+
+### 13.3 编码器累计
+
+编码器跨圈处理按当前库风格：
+
+```cpp
+if (Rx_Data.Encoder_Init_Flag == false)
+{
+    // 第一帧只建立编码器基准, 防止Pre_Encoder默认0导致误判跨圈
+    Rx_Data.Encoder_Init_Flag = true;
+    Rx_Data.Pre_Encoder = tmp_encoder;
+    Rx_Data.Now_Encoder = tmp_encoder;
+    Rx_Data.Total_Round = 0;
+    Rx_Data.Total_Encoder = (int64_t)tmp_encoder + (int64_t)Encoder_Offset;
+}
+else
+{
+    delta_encoder = (int32_t)tmp_encoder - (int32_t)Rx_Data.Pre_Encoder;
+}
+```
+
+规则：
+
+1. 第一帧只建立基准，不直接判断跨圈。
+2. 跨圈阈值使用半圈编码器值。
+3. 累计编码器使用 `int64_t`。
+4. 编码器偏移使用 `Encoder_Offset`。
+
+---
+
+## 14. 输出规范
+
+### 14.1 控制输出
+
+控制输出流程：
+
+```cpp
+PID_Calculate();
+
+Out = (Target_Current + Feedforward_Current) * CURRENT_TO_OUT;
+Basic_Math_Constrain(&Out, -THEORETICAL_OUTPUT_CURRENT_MAX, THEORETICAL_OUTPUT_CURRENT_MAX);
+
+Output();
+```
+
+规则：
+
+1. 先算控制量，再换算协议输出值。
+2. 输出值统一放在 `Out`。
+3. 写入 CAN 缓冲区统一由 `Output()` 完成。
+4. `Output()` 只负责写缓冲区，不负责真正发送 CAN。
+
+---
+
+### 14.2 清输出
+
+清输出函数格式：
+
+```cpp
+void Class_Device::Clean_Output()
+{
+    Rx_Data.Encoder_Init_Flag = false;
+
+    PID_Angle.Set_Integral_Error(0.0f);
+    PID_Omega.Set_Integral_Error(0.0f);
+
+    Out = 0.0f;
+
+    if (Tx_Data != nullptr)
+    {
+        Tx_Data[0] = 0U;
+        Tx_Data[1] = 0U;
+    }
+}
+```
+
+规则：
+
+1. 清输出必须清 `Out`。
+2. 清输出必须清发送缓存对应字节。
+3. 掉线后可以重置编码器初始化标志。
+4. PID 积分要清，防止重连后积分冲击。
+5. 是否清目标值由具体设备策略决定，不强制。
+
+---
+
+## 15. 分层边界规范
+
+### 15.1 Driver 层
+
+Driver 层只做通用外设能力：
+
+```text
+CAN_Init
+CAN_Transmit_Data
+UART_Init
+UART_Transmit_Data
 ```
 
 Driver 层不要做：
 
 ```text
-1. 电机协议解析
-2. 裁判系统协议解析
-3. 控制算法
-4. 业务状态机
-5. 复杂错误恢复策略
-6. 大量应用层缓存
+设备协议解析
+电机控制算法
+整车状态机
+具体设备掉线策略
 ```
-
-原则：
-
-1. Driver 层只提供“通用收发能力”。
-2. 具体协议解析放到 Device 层。
-3. 复杂控制逻辑放到 Task 层或 Control 层。
-4. Driver 不主动依赖上层模块。
 
 ---
 
-### 10.2 BSP 层规范
+### 15.2 Device 层
 
-BSP 更贴近板级硬件。
+Device 层可以做：
 
-```cpp
-/**
- * @brief 蜂鸣器控制类
- */
-class Class_Buzzer
-{
-public:
-    // 初始化蜂鸣器
-    void Init();
-
-    // 设置频率
-    void Set_Frequency(uint32_t Frequency);
-
-    // 开始播放
-    void Start();
-
-    // 停止播放
-    void Stop();
-};
+```text
+协议解析
+状态维护
+离线检测
+目标值接口
+基础闭环控制封装
+发送缓存管理
 ```
 
-规则：
+Device 层不要做：
 
-1. BSP 类注释写清楚硬件对象。
-2. 不在 BSP 类里写任务层逻辑。
-3. 类内简单操作可以 inline。
-4. 涉及 HAL 的复杂操作放到 `.cpp`。
-5. BSP 不负责整车策略。
+```text
+比赛策略
+遥控器模式切换
+整车任务调度
+多个设备之间的复杂协同
+```
 
 ---
 
-### 10.3 Algorithm 层规范
+### 15.3 Task 层
 
-算法类一般用 `Class_XXX`。
+Task 层负责：
 
-```cpp
-/**
- * @brief 波形发生器类
- */
-class Class_Waveform
-{
-public:
-    // 初始化
-    void Init();
-
-    // 更新输出
-    void Update();
-
-    // 获取输出值
-    float Get_Output();
-
-private:
-    float Output;
-};
+```text
+初始化对象
+注册回调
+按ID分发数据
+周期调用设备对象
+组合多个设备完成业务逻辑
 ```
 
-cpp 定义处：
+Task 层不要把设备协议解析代码复制出来。
+
+---
+
+## 16. 提交前检查清单
+
+新增设备库提交前检查：
+
+```text
+[ ] 文件头注释完整
+[ ] h/cpp 区块标题完整
+[ ] 文件名符合层级命名
+[ ] enum / struct / class 命名统一
+[ ] public 接口顺序统一
+[ ] protected 成员顺序统一
+[ ] Getter 全部 const
+[ ] Setter 参数使用 __ 前缀
+[ ] inline 函数集中放在 h 文件底部
+[ ] cpp 中函数定义有 Doxygen 注释
+[ ] 外部指针有 nullptr 保护
+[ ] 外设实例有非法分支 return
+[ ] 输出值有限幅
+[ ] 掉线后能清输出
+[ ] 单位注释正确
+[ ] 没有临时测试代码
+[ ] 没有无意义 TODO
+```
+
+---
+
+## 17. 新设备库最小模板
+
+### 17.1 `dvc_xxx.h`
 
 ```cpp
 /**
- * @brief 更新输出
+ * @file dvc_xxx.h
+ * @author WangFonzhuo
+ * @brief XXX的配置与操作
+ * @version 1.0
+ * @date 2026-xx-xx 27赛季
+ */
+
+#ifndef DVC_XXX_H
+#define DVC_XXX_H
+
+/* Includes ------------------------------------------------------------------*/
+
+/* Exported macros -----------------------------------------------------------*/
+
+/* Exported types ------------------------------------------------------------*/
+
+/**
+ * @brief XXX状态
+ */
+enum Enum_XXX_Status
+{
+    XXX_Status_DISABLE = 0,
+    XXX_Status_ENABLE,
+};
+
+/**
+ * @brief XXX设备类
+ */
+class Class_XXX
+{
+public:
+    /**
+     * @brief 初始化XXX
+     */
+    void Init();
+
+    /**
+     * @brief 获取设备状态
+     */
+    inline Enum_XXX_Status Get_Status() const;
+
+    /**
+     * @brief CAN通信接收回调函数
+     * @param Rx_Data 接收数据缓冲区
+     */
+    void CAN_RxCpltCallback(uint8_t *Rx_Data);
+
+    /**
+     * @brief TIM定时器中断计算回调函数
+     */
+    void TIM_Calculate_PeriodElapsedCallback();
+
+protected:
+    // 设备状态
+    Enum_XXX_Status Status = XXX_Status_DISABLE;
+
+    // 数据处理过程
+    void Data_Process(uint8_t *Rx_Data_Buffer);
+};
+
+/* Exported variables --------------------------------------------------------*/
+
+/* Exported function prototypes ----------------------------------------------*/
+
+/* Exported function definitions ---------------------------------------------*/
+
+/**
+ * @brief 获取设备状态
  *
- * @note
- * 根据当前波形类型和时间计算输出值.
+ * @return Enum_XXX_Status 设备状态
  */
-void Class_Waveform::Update()
+inline Enum_XXX_Status Class_XXX::Get_Status() const
 {
+    return (Status);
 }
+
+#endif
+
+/*----------------------------------------------------------------------------*/
 ```
-
-规则：
-
-1. 算法层不直接依赖具体硬件。
-2. 算法层不直接调用 HAL。
-3. 算法层只关注输入、输出和状态更新。
-4. 算法推导不要写进代码注释，长推导放笔记文档。
 
 ---
 
-### 10.4 Device 层规范
-
-Device 层用于具体设备协议。
+### 17.2 `dvc_xxx.cpp`
 
 ```cpp
 /**
- * @brief 电机设备类
+ * @file dvc_xxx.cpp
+ * @author WangFonzhuo
+ * @brief XXX的配置与操作
+ * @version 1.0
+ * @date 2026-xx-xx 27赛季
  */
-class Class_Motor
+
+/* Includes ------------------------------------------------------------------*/
+
+#include "dvc_xxx.h"
+
+/* Macros --------------------------------------------------------------------*/
+
+/* Types ---------------------------------------------------------------------*/
+
+/* Variables -----------------------------------------------------------------*/
+
+/* Function prototypes -------------------------------------------------------*/
+
+/* Function definitions ------------------------------------------------------*/
+
+/**
+ * @brief 初始化XXX
+ */
+void Class_XXX::Init()
 {
-public:
-    // 初始化电机
-    void Init();
+}
 
-    // CAN反馈数据处理
-    void CAN_RxCallback(uint8_t *Data);
+/**
+ * @brief CAN通信接收回调函数
+ * @param Rx_Data 接收数据缓冲区
+ */
+void Class_XXX::CAN_RxCpltCallback(uint8_t *Rx_Data)
+{
+    Data_Process(Rx_Data);
+}
 
-    // 设置目标值
-    void Set_Target(float Target);
-};
+/**
+ * @brief TIM定时器中断计算回调函数
+ */
+void Class_XXX::TIM_Calculate_PeriodElapsedCallback()
+{
+}
+
+/**
+ * @brief 数据处理过程
+ * @param Rx_Data_Buffer 接收数据缓冲区
+ */
+void Class_XXX::Data_Process(uint8_t *Rx_Data_Buffer)
+{
+    if (Rx_Data_Buffer == nullptr)
+    {
+        return;
+    }
+}
+
+/*----------------------------------------------------------------------------*/
 ```
-
-规则：
-
-1. Device 层可以解析协议。
-2. Device 层不要直接处理底层中断。
-3. Device 层通过 Driver 层回调获得数据。
-4. Device 层可以维护设备状态、离线检测、协议数据。
-5. Device 层不写整车业务状态机。
-
-
 
 ---
 
-## 12. 空函数与预留函数规范
+## 18. 最终执行标准
 
-如果必须保留空函数，写清楚用途：
+后续新增设备库时，以这句话为准：
 
-```cpp
-/**
- * @brief CAN的TIM定时器中断发送回调函数
- */
-void TIM_1ms_CAN_PeriodElapsedCallback()
-{
-}
+> 先让新库在文件结构、命名、注释、接口顺序、成员变量顺序上看起来像 `dvc_motor_dji`，再考虑具体设备的特殊性。
+
+如果某个设备确实需要打破本规范，必须满足：
+
+```text
+1. 能说明为什么不能照搬当前规范
+2. 只局部打破，不整体换风格
+3. 同一个文件内保持一致
 ```
 
-规则：
-
-1. 空函数可以保留，但必须有明确用途。
-2. 不要加入一堆没有计划使用的空函数。
-3. 空函数不写 TODO，除非马上要补。
-4. 如果只是临时测试函数，提交前删除。
+/*----------------------------------------------------------------------------*/

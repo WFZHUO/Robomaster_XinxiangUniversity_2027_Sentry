@@ -65,6 +65,30 @@ void Class_PID::Init(float __K_P, float __K_I, float __K_D, float __K_F,
 }
 
 /**
+ * @brief 重置
+ */
+void Class_PID::Clear()
+{
+    Target = 0.0f;
+    Now = 0.0f;
+
+    Pre_Now = 0.0f;
+    Pre_Target = 0.0f;
+    Pre_Out = 0.0f;
+    Pre_Error = 0.0f;
+
+    Out = 0.0f;
+    P_Out = 0.0f;
+    I_Out = 0.0f;
+    D_Out = 0.0f;
+    F_Out = 0.0f;
+    Error = 0.0f;
+
+    Integral_Error = 0.0f;
+    Filtered_D_Out = 0.0f;
+}
+
+/**
  * @brief PID定时调整回调函数
  */
 void Class_PID::TIM_Adjust_PeriodElapsedCallback()

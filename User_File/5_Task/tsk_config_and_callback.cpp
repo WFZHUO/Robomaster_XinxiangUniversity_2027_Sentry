@@ -21,6 +21,7 @@
 #include "dvc_vofa.h"
 #include "alg_waveform.h"
 #include "drv_can.h"
+#include "dvc_motor_dji.h"
 
 /* Macros --------------------------------------------------------------------*/
 
@@ -31,21 +32,28 @@
 // 板载Key
 Class_ArkKey Key;
 
-// Vofa
-Class_VofaSum8_USB Vofa;
-const char *Vofa_Rx_List[] =
+// Serialplot
+Class_Serialplot_USB Serialplot;
+const char *Serialplot_Rx_List[] =
 {
-    "p",
-    "i",
-    "d",
+    "op",
+    "oi",
+    "od",
+    "ap",
+    "ai",
+    "ad",
     "fre",
 };
-// Vofa测试用变量
-float p,i,d,fre = 1.0f;
+// Serialplot测试用变量
+float Motor_C620_Now_Omega, Motor_C620_Now_Current, Motor_C620_Now_Encoder, Motor_C620_Now_Angle;
+float Motor_C620_Target_Angle, Motor_C620_Target_Omega, Motor_C620_Target_Current;
 
 // 波形发生器
 Class_Waveform Waveform_Sine;
 float Waveform_Sine_Out;
+
+// C620
+Class_Motor_DJI_C620 Motor_C620;
 
 // 全局初始化完成标志位
 bool init_finished = false;
@@ -59,39 +67,51 @@ bool init_finished = false;
  */
 void UART1_Callback(uint8_t *Buffer, uint16_t Length)
 {
-    HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_15);   
+    //HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_15);   
 }
 
 /**
- * @brief USB任务回调函数, 绑定Vofa
+ * @brief USB任务回调函数, 绑定Serialplot
  */
 void USB0_Callback(uint8_t *Buffer, uint32_t Length)
 {
-    Vofa.USB_RxCpltCallback(Buffer, static_cast<uint16_t>(Length));
+    Serialplot.USB_RxCpltCallback(Buffer, static_cast<uint16_t>(Length));
 
-    switch (Vofa.Get_Variable_Index())
+    switch (Serialplot.Get_Variable_Index())
     {
         case 0:
-            p = Vofa.Get_Variable_Value();
+            Motor_C620.PID_Omega.Set_K_P(Serialplot.Get_Variable_Value());
             break;
 
         case 1:
-            i = Vofa.Get_Variable_Value();
+            Motor_C620.PID_Omega.Set_K_I(Serialplot.Get_Variable_Value());
             break;
 
         case 2:
-            d = Vofa.Get_Variable_Value();
+            Motor_C620.PID_Omega.Set_K_D(Serialplot.Get_Variable_Value());
             break;
 
         case 3:
-            fre = Vofa.Get_Variable_Value();
+            Motor_C620.PID_Angle.Set_K_P(Serialplot.Get_Variable_Value());
+            break;
+
+        case 4:
+            Motor_C620.PID_Angle.Set_K_I(Serialplot.Get_Variable_Value());
+            break;
+
+        case 5:
+            Motor_C620.PID_Angle.Set_K_D(Serialplot.Get_Variable_Value());
+            break;
+
+        case 6:
+            // 预留变量, 暂时没有功能
             break;
 
         default:
             break;
     }
 
-    HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_15);   
+    //HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_15);   
 }
 
 /**
@@ -102,7 +122,12 @@ void USB0_Callback(uint8_t *Buffer, uint32_t Length)
  */
 void CAN1_Callback(FDCAN_RxHeaderTypeDef &Header, uint8_t *Buffer)
 {
-    HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_15);
+    if (Header.Identifier == Motor_C620.Get_CAN_Rx_ID())
+    {
+        Motor_C620.CAN_RxCpltCallback(Buffer);
+    }
+
+    //HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_15);
 }
 
 /**
@@ -123,11 +148,21 @@ void Task1ms_Callback()
     // 更新波形
     Waveform_Sine_Out = Waveform_Sine.Update();
 
-    // Vofa
-    if(fre == 1.0f) // 根据fre的值来控制是否开启Vofa的1ms周期发送, 以节省资源
-    {
-        Vofa.TIM_1ms_Write_PeriodElapsedCallback();
-    }
+    // Serialplot
+    Motor_C620_Now_Omega = Motor_C620.Get_Now_Omega();
+    Motor_C620_Now_Current = Motor_C620.Get_Now_Current();
+    Motor_C620_Now_Encoder = Motor_C620.Get_Now_Encoder();
+    Motor_C620_Now_Angle = Motor_C620.Get_Now_Angle();
+    Motor_C620_Target_Angle = Motor_C620.Get_Target_Angle();
+    Motor_C620_Target_Omega = Motor_C620.Get_Target_Omega();
+    Motor_C620_Target_Current = Motor_C620.Get_Target_Current();
+
+    Serialplot.TIM_1ms_Write_PeriodElapsedCallback();
+
+    // 电机控制
+    Motor_C620.Set_Target_Angle(Waveform_Sine_Out);
+    Motor_C620.TIM_Calculate_PeriodElapsedCallback();
+    Motor_DJI_CAN_Tx_PeriodElapsedCallback(&hfdcan1);
 
     // 10ms任务
     static uint16_t mod10 = 0;
@@ -147,6 +182,17 @@ void Task1ms_Callback()
         // Key扫描并更新按键状态
         Class_ArkKey::TIM_Update_PeriodElapsedCallback();
     }    
+
+    // 100ms任务
+    static uint16_t mod100 = 0;
+    mod100++;
+    if(mod100 == 100)
+    {
+        mod100 = 0;
+
+        // 电机定时器回调函数
+        Motor_C620.TIM_100ms_Alive_PeriodElapsedCallback();
+    }
 }
 
 /**
@@ -168,17 +214,21 @@ void Task_Init()
     BSP_Buzzer.Init();
     // 初始化Key
     Key.Init(GPIOA, GPIO_PIN_15);
-    // 初始化Vofa
-    Vofa.Init(4, Vofa_Rx_List);
-    Vofa.Set_Data(5,
-                &p,
-                &i,
-                &d,
-                &fre,
-                &Waveform_Sine_Out);
+    // 初始化Serialplot
+    Serialplot.Init(7, Serialplot_Rx_List);
+    Serialplot.Set_Data(8,
+                        &Waveform_Sine_Out,
+                        &Motor_C620_Now_Omega,
+                        &Motor_C620_Now_Current,
+                        &Motor_C620_Now_Encoder,
+                        &Motor_C620_Now_Angle,
+                        &Motor_C620_Target_Angle,
+                        &Motor_C620_Target_Omega,
+                        &Motor_C620_Target_Current);
+
     // 初始化波形
     Waveform_Sine.Init();
-    Waveform_Sine.Sine(1.0f, 1.0f);
+    Waveform_Sine.Sine(5.0f, 0.5f);
 
     // 初始化USB
     USB_Init(USB0_Callback);
@@ -193,6 +243,11 @@ void Task_Init()
     // 定时器中断初始化
     HAL_TIM_Base_Start_IT(&htim7);
     HAL_TIM_Base_Start_IT(&htim5);
+
+    // 电机初始化
+    Motor_C620.Init(&hfdcan1, Motor_DJI_ID_0x201, Motor_DJI_Control_Method_ANGLE);
+    Motor_C620.PID_Omega.Init(0.0f, 0.0f, 0.0f);
+    Motor_C620.PID_Angle.Init(0.0f, 0.0f, 0.0f);
 
     // 设置初始化完成标志位
     init_finished = true;

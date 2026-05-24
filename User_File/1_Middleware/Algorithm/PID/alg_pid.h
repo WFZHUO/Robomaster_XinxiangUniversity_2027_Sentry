@@ -192,6 +192,11 @@ public:
     inline void Set_Zero_Position_Integral_Bleeding(Enum_PID_Zero_Position_Integral_Bleeding __Zero_Position_Integral_Bleeding);
 
     /**
+     * @brief 重置
+     */
+    void Clear();
+
+    /**
      * @brief PID定时调整回调函数
      */
     void TIM_Adjust_PeriodElapsedCallback();

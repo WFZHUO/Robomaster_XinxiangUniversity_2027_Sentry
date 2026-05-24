@@ -85,6 +85,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     User_File/2_Device/Plotter/Vofa/dvc_vofa.cpp
     User_File/1_Middleware/Algorithm/Waveform/alg_waveform.cpp
     User_File/1_Middleware/Driver/CAN/drv_can.cpp
+    User_File/2_Device/Motor/Motor_DJI/dvc_motor_dji.cpp
 )
 
 # Add include paths
@@ -103,6 +104,7 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     User_File/2_Device/Plotter/Vofa
     User_File/1_Middleware/Algorithm/Waveform
     User_File/1_Middleware/Driver/CAN
+    User_File/2_Device/Motor/Motor_DJI
 )
 
 # Add project symbols (macros)

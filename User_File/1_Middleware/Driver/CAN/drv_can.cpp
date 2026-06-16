@@ -142,16 +142,22 @@ void CAN_Init(FDCAN_HandleTypeDef *hfdcan, CAN_Callback Callback_Function)
 
     CAN_Filter_Mask_Config(hfdcan);
 
-    // Rx FIFO0新消息走Interrupt Line0
+    // Rx FIFO0新消息,ERROR_WARNING,ERROR_PASSIVE,BUS_OFF走Interrupt Line0
     HAL_FDCAN_ConfigInterruptLines(hfdcan,
-                                    FDCAN_IT_RX_FIFO0_NEW_MESSAGE,
-                                    FDCAN_INTERRUPT_LINE0);
+                                FDCAN_IT_RX_FIFO0_NEW_MESSAGE |
+                                FDCAN_IT_ERROR_WARNING |
+                                FDCAN_IT_ERROR_PASSIVE |
+                                FDCAN_IT_BUS_OFF,
+                                FDCAN_INTERRUPT_LINE0);
 
     HAL_FDCAN_Start(hfdcan);
 
-    // 启动CAN接收中断
+    // 启动CAN接收,ERROR_WARNING,ERROR_PASSIVE,BUS_OFF中断
     HAL_FDCAN_ActivateNotification(hfdcan,
-                                    FDCAN_IT_RX_FIFO0_NEW_MESSAGE,
+                                    FDCAN_IT_RX_FIFO0_NEW_MESSAGE |
+                                    FDCAN_IT_ERROR_WARNING |
+                                    FDCAN_IT_ERROR_PASSIVE |
+                                    FDCAN_IT_BUS_OFF,
                                     0);
 }
 
@@ -256,6 +262,31 @@ extern "C" void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t 
             can_manage_object->Callback_Function(can_manage_object->Rx_Header,
                                                  can_manage_object->Rx_Buffer);
         }
+    }
+}
+
+/**
+ * @brief HAL库CAN错误中断回调函数
+ *
+ * @param hfdcan CAN编号
+ * @param ErrorStatusITs 错误中断标志
+ */
+extern "C" void HAL_FDCAN_ErrorStatusCallback(FDCAN_HandleTypeDef *hfdcan, uint32_t ErrorStatusITs)
+{
+    if ((ErrorStatusITs & FDCAN_IT_ERROR_WARNING) != 0U)
+    {
+        // CAN 错误警告
+    }
+
+    if ((ErrorStatusITs & FDCAN_IT_ERROR_PASSIVE) != 0U)
+    {
+        // CAN 进入 Error Passive
+    }
+
+    if ((ErrorStatusITs & FDCAN_IT_BUS_OFF) != 0U)
+    {
+        // CAN 进入 Bus-Off, 启动 Bus-Off 恢复流程
+        CLEAR_BIT(hfdcan->Instance->CCCR, FDCAN_CCCR_INIT);
     }
 }
 

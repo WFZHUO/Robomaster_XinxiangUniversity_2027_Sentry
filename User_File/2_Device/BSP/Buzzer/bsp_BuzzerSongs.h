@@ -38,18 +38,21 @@ void BuzzerSongs_Play(const Struct_BuzzerSongNote *song, uint32_t note_num, uint
 
 /**
  * @brief 播放 GALA《你》
+ * @param loudness 响度, 0~1
  */
-void BuzzerSongs_Play_Gala_You(void);
+void BuzzerSongs_Play_Gala_You(float loudness = 1.0f);
 
 /**
  * @brief 播放《Love Theme from The Godfather》
+ * @param loudness 响度, 0~1
  */
-void BuzzerSongs_Play_Godfather(void);
+void BuzzerSongs_Play_Godfather(float loudness = 1.0f);
 
 /**
  * @brief 播放《See You Again》
+ * @param loudness 响度, 0~1
  */
-void BuzzerSongs_Play_See_You_Again(void);
+void BuzzerSongs_Play_See_You_Again(float loudness = 1.0f);
 
 #endif /* BSP_BUZZER_SONGS_H */
 

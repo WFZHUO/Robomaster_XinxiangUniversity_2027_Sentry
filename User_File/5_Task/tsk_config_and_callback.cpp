@@ -262,7 +262,7 @@ void Task_Loop()
 
     if (played == false)
     {
-        BuzzerSongs_Play_Godfather();
+        BuzzerSongs_Play_Godfather(0.01f);
         played = true;
     }
 }

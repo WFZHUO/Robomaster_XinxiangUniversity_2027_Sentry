@@ -516,40 +516,43 @@ void BuzzerSongs_Play(const Struct_BuzzerSongNote *song, uint32_t note_num, uint
 
 /**
  * @brief 播放GALA《你》
+ * @param loudness 响度, 0~1
  */
-void BuzzerSongs_Play_Gala_You(void)
+void BuzzerSongs_Play_Gala_You(float loudness)
 {
     BuzzerSongs_Play(
         BuzzerSong_Gala_You,
         sizeof(BuzzerSong_Gala_You) / sizeof(BuzzerSong_Gala_You[0]),
         BUZZER_SONG_DEFAULT_UNIT_MS,
-        BUZZER_SONG_DEFAULT_VOL
+        loudness
     );
 }
 
 /**
  * @brief 播放《Love Theme from The Godfather》
+ * @param loudness 响度, 0~1
  */
-void BuzzerSongs_Play_Godfather(void)
+void BuzzerSongs_Play_Godfather(float loudness)
 {
     BuzzerSongs_Play(
         BuzzerSong_Godfather,
         sizeof(BuzzerSong_Godfather) / sizeof(BuzzerSong_Godfather[0]),
         400U,
-        1.0f
+        loudness
     );
 }
 
 /**
  * @brief 播放《See You Again》
+ * @param loudness 响度, 0~1
  */
-void BuzzerSongs_Play_See_You_Again(void)
+void BuzzerSongs_Play_See_You_Again(float loudness)
 {
     BuzzerSongs_Play(
         BuzzerSong_See_You_Again,
         sizeof(BuzzerSong_See_You_Again) / sizeof(BuzzerSong_See_You_Again[0]),
         125U,
-        1.0f
+        loudness
     );
 }
 

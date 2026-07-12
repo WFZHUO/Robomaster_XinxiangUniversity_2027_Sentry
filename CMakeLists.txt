@@ -86,6 +86,8 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     User_File/1_Middleware/Algorithm/Waveform/alg_waveform.cpp
     User_File/1_Middleware/Driver/CAN/drv_can.cpp
     User_File/2_Device/Motor/Motor_DJI/dvc_motor_dji.cpp
+    User_File/1_Middleware/Driver/SPI/drv_spi.cpp
+    User_File/2_Device/BSP/WS2812/bsp_ws2812.cpp
 )
 
 # Add include paths
@@ -105,6 +107,8 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     User_File/1_Middleware/Algorithm/Waveform
     User_File/1_Middleware/Driver/CAN
     User_File/2_Device/Motor/Motor_DJI
+    User_File/1_Middleware/Driver/SPI
+    User_File/2_Device/BSP/WS2812
 )
 
 # Add project symbols (macros)

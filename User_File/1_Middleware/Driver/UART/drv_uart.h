@@ -27,7 +27,6 @@ extern "C" {
 
 /**
  * @brief UART通信接收回调函数数据类型
- *
  */
 typedef void (*UART_Callback)(uint8_t *Buffer, uint16_t Length);
 
@@ -96,7 +95,6 @@ void UART_Reinit(UART_HandleTypeDef * huart);
 uint8_t UART_Transmit_Data(UART_HandleTypeDef *huart, uint8_t *Data, uint16_t Length);
 
 /* Exported function definitions ---------------------------------------------*/
-
 
 #ifdef __cplusplus
 }

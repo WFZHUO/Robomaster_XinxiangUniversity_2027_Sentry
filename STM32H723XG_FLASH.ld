@@ -238,6 +238,15 @@ SECTIONS
     . = ALIGN(4);
   } >RAM_D2
 
+  /* BDMA buffers: place in RAM_D3/SRAM4 */
+  .bdma_buffer (NOLOAD) :
+  {
+    . = ALIGN(32);
+    *(.bdma_buffer)
+    *(.bdma_buffer*)
+    . = ALIGN(32);
+  } >RAM_D3
+  
   /* User_heap_stack section, used to check that there is enough RAM left */
   ._user_heap_stack (NOLOAD) :
   {

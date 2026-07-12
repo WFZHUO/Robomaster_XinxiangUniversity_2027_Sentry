@@ -22,6 +22,8 @@
 #include "alg_waveform.h"
 #include "drv_can.h"
 #include "dvc_motor_dji.h"
+#include "drv_spi.h"
+#include "bsp_ws2812.h"
 
 /* Macros --------------------------------------------------------------------*/
 
@@ -170,6 +172,10 @@ void Task1ms_Callback()
     if(mod10 == 10)
     {
         mod10 = 0;
+        
+        // WS2812定时刷新
+        BSP_WS2812.Rainbow();
+        BSP_WS2812.TIM_10ms_Write_PeriodElapsedCallback();
     }
 
     // 15ms任务
@@ -214,6 +220,8 @@ void Task_Init()
     BSP_Buzzer.Init();
     // 初始化Key
     Key.Init(GPIOA, GPIO_PIN_15);
+    // 初始化WS2812
+    BSP_WS2812.Init(&hspi6);
     // 初始化Serialplot
     Serialplot.Init(7, Serialplot_Rx_List);
     Serialplot.Set_Data(8,
@@ -262,7 +270,7 @@ void Task_Loop()
 
     if (played == false)
     {
-        BuzzerSongs_Play_Godfather(0.01f);
+        BuzzerSongs_Play_Godfather(1.0f);
         played = true;
     }
 }

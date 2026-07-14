@@ -402,6 +402,8 @@ extern "C" void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef *hspi)
 
     SPI_Deselect(spi_manage_object);
 
+    SPI_Clear_Transfer_State(spi_manage_object);
+
     if (spi_manage_object->Callback_Function != nullptr)
     {
         spi_manage_object->Callback_Function(spi_manage_object->Tx_Buffer,
@@ -409,8 +411,6 @@ extern "C" void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef *hspi)
                                              spi_manage_object->Tx_Buffer_Length,
                                              0U);
     }
-
-    SPI_Clear_Transfer_State(spi_manage_object);
 }
 
 /**
@@ -427,11 +427,13 @@ extern "C" void HAL_SPI_TxRxCpltCallback(SPI_HandleTypeDef *hspi)
         return;
     }
 
+    spi_manage_object->Rx_Timestamp = SYS_Timestamp.Get_Current_Timestamp();
+
     SPI_Rx_DCache_Invalidate(spi_manage_object->Rx_Buffer, spi_manage_object->Rx_Buffer_Length);
 
     SPI_Deselect(spi_manage_object);
 
-    spi_manage_object->Rx_Timestamp = SYS_Timestamp.Get_Current_Timestamp();
+    SPI_Clear_Transfer_State(spi_manage_object);
 
     if (spi_manage_object->Callback_Function != nullptr)
     {
@@ -440,8 +442,6 @@ extern "C" void HAL_SPI_TxRxCpltCallback(SPI_HandleTypeDef *hspi)
                                              spi_manage_object->Tx_Buffer_Length,
                                              spi_manage_object->Rx_Buffer_Length);
     }
-
-    SPI_Clear_Transfer_State(spi_manage_object);
 }
 
 /**

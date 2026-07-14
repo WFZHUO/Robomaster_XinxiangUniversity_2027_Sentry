@@ -88,6 +88,8 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     User_File/2_Device/Motor/Motor_DJI/dvc_motor_dji.cpp
     User_File/1_Middleware/Driver/SPI/drv_spi.cpp
     User_File/2_Device/BSP/WS2812/bsp_ws2812.cpp
+    User_File/1_Middleware/Driver/OSPI/drv_ospi.cpp
+    User_File/2_Device/BSP/W25Q64JV/bsp_w25q64jv.cpp
 )
 
 # Add include paths
@@ -109,6 +111,8 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     User_File/2_Device/Motor/Motor_DJI
     User_File/1_Middleware/Driver/SPI
     User_File/2_Device/BSP/WS2812
+    User_File/1_Middleware/Driver/OSPI
+    User_File/2_Device/BSP/W25Q64JV
 )
 
 # Add project symbols (macros)

@@ -10,20 +10,22 @@
 /* Includes ------------------------------------------------------------------*/
 
 #include "tsk_config_and_callback.h"
+#include "drv_tim.h"
+#include "drv_uart.h"
+#include "drv_usb.h"
+#include "drv_can.h"
+#include "drv_spi.h"
+#include "drv_ospi.h"
+#include "sys_timestamp.h"
+#include "alg_waveform.h"
+#include "bsp_ws2812.h"
 #include "bsp_buzzer.h"
 #include "bsp_BuzzerSongs.h"
 #include "bsp_arkey.h"
-#include "drv_tim.h"
-#include "drv_uart.h"
-#include "sys_timestamp.h"
+#include "bsp_w25q64jv.h"
 #include "dvc_serialplot.h"
-#include "drv_usb.h"
-#include "dvc_vofa.h"
-#include "alg_waveform.h"
-#include "drv_can.h"
 #include "dvc_motor_dji.h"
-#include "drv_spi.h"
-#include "bsp_ws2812.h"
+#include "dvc_vofa.h"
 
 /* Macros --------------------------------------------------------------------*/
 
@@ -130,6 +132,20 @@ void CAN1_Callback(FDCAN_RxHeaderTypeDef &Header, uint8_t *Buffer)
     }
 
     //HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_15);
+}
+
+/**
+ * @brief OSPI1任务回调函数
+ *
+ * @param Operation 完成或发生错误的操作类型
+ * @param Buffer 数据缓冲区, 无数据或发生错误时为nullptr
+ * @param Length 有效数据长度
+ * @param Error_Code HAL错误码, 正常回调时均为HAL_OSPI_ERROR_NONE, 进入HAL_OSPI_ErrorCallback时为对应错误码
+ */
+void OSPI1_Callback(enum Enum_OSPI_Operation Operation, uint8_t *Buffer,
+                    uint32_t Length, uint32_t Error_Code)
+{
+    BSP_W25Q64JV.OSPI_Callback(Operation, Buffer, Length, Error_Code);
 }
 
 /**
@@ -247,6 +263,8 @@ void Task_Init()
     UART_Init(&huart1, UART1_Callback);
     // 初始化CAN
     CAN_Init(&hfdcan1, CAN1_Callback);
+    // 初始化OSPI
+    OSPI_Init(&hospi1, OSPI1_Callback);
 
     // 定时器中断初始化
     HAL_TIM_Base_Start_IT(&htim7);
@@ -256,6 +274,9 @@ void Task_Init()
     Motor_C620.Init(&hfdcan1, Motor_DJI_ID_0x201, Motor_DJI_Control_Method_ANGLE);
     Motor_C620.PID_Omega.Init(0.0f, 0.0f, 0.0f);
     Motor_C620.PID_Angle.Init(0.0f, 0.0f, 0.0f);
+
+    // 初始化W25Q64JV
+    BSP_W25Q64JV.Init(&hospi1);
 
     // 设置初始化完成标志位
     init_finished = true;

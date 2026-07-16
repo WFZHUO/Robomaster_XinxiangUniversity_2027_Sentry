@@ -1,5 +1,5 @@
 /**
- * @file drv_ospi.cpp
+ * @file drv_ospi.h
  * @author WangFonzhuo
  * @brief OSPI通用接口.
  *        OSPI 异步驱动. 命令、MDMA发送、MDMA接收和自动轮询的完成均通过中断回调通知；接口启动阶段 HAL 会同步检查并等待硬件 BUSY 清零，但正常状态下该等待会立即结束.

@@ -78,11 +78,11 @@ extern struct Struct_UART_Manage_Object UART10_Manage_Object;
 void UART_Init(UART_HandleTypeDef *huart, UART_Callback Callback_Function);
 
 /**
- * @brief 重新初始化UART
+ * @brief 重新初始化UART接收
  *
  * @param huart UART编号
  */
-void UART_Reinit(UART_HandleTypeDef * huart);
+void UART_Reinit(UART_HandleTypeDef *huart);
 
 /**
  * @brief UART发送数据
@@ -90,7 +90,8 @@ void UART_Reinit(UART_HandleTypeDef * huart);
  * @param huart UART编号
  * @param Data 被发送的数据指针
  * @param Length 数据长度
- * @return 发送状态
+ * @return uint8_t HAL执行状态
+ * @note 函数会先将数据复制到UART专属DMA发送缓冲区
  */
 uint8_t UART_Transmit_Data(UART_HandleTypeDef *huart, uint8_t *Data, uint16_t Length);
 

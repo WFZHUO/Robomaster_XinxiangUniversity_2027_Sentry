@@ -1,9 +1,9 @@
 /**
  * @file drv_uart.h
- * @author WangFonzhuo
+ * @author WangFangzhuo
  * @brief UART通用接口
- * @version 1.0
- * @date 2026-04-24 27赛季
+ * @version 1.2
+ * @date 2026-04-24
  */
 
 #ifndef DRV_UART_H
@@ -15,13 +15,14 @@ extern "C" {
 
 /* Includes ------------------------------------------------------------------*/
 
-#include "usart.h"
+#include <stdint.h>
 #include "stm32h7xx_hal.h"
+#include "usart.h"
 
 /* Exported macros -----------------------------------------------------------*/
 
-// 缓冲区字节长度
-#define UART_BUFFER_SIZE 512
+// 单个UART收发缓冲区的字节数
+#define UART_BUFFER_SIZE 512U
 
 /* Exported types ------------------------------------------------------------*/
 
@@ -38,24 +39,21 @@ struct Struct_UART_Manage_Object
     UART_HandleTypeDef *UART_Handler;
     UART_Callback Callback_Function;
 
-    // 双缓冲适配的缓冲区 以及 当前激活的缓冲区
+    // 软件双缓冲
     uint8_t *Rx_Buffer_0;
     uint8_t *Rx_Buffer_1;
-    // 正在接收的缓冲区
+    // DMA当前正在写入的缓冲区
     uint8_t *Rx_Buffer_Active;
-    // 接收完毕的缓冲区
+    // 最近一次接收完成的缓冲区
     uint8_t *Rx_Buffer_Ready;
 
-    // 接收时间戳
+    // 最近一次接收完成的时间戳
     uint64_t Rx_Time_Stamp;
 };
 
 /* Exported variables --------------------------------------------------------*/
 
-// 全局初始化完成标志位
-extern bool init_finished;
-
-// 声明UART管理对象
+// UART管理对象
 extern struct Struct_UART_Manage_Object UART1_Manage_Object;
 extern struct Struct_UART_Manage_Object UART2_Manage_Object;
 extern struct Struct_UART_Manage_Object UART3_Manage_Object;
@@ -74,6 +72,7 @@ extern struct Struct_UART_Manage_Object UART10_Manage_Object;
  *
  * @param huart UART编号
  * @param Callback_Function 回调函数
+ * @note Callback_Function在中断上下文执行, 应保持简短且不可阻塞
  */
 void UART_Init(UART_HandleTypeDef *huart, UART_Callback Callback_Function);
 
@@ -91,11 +90,10 @@ void UART_Reinit(UART_HandleTypeDef *huart);
  * @param Data 被发送的数据指针
  * @param Length 数据长度
  * @return uint8_t HAL执行状态
- * @note 函数会先将数据复制到UART专属DMA发送缓冲区
+ * @note 函数会先将数据复制到UART专属DMA发送缓冲区, 返回后Data可以立即复用
+ * @note 同一UART正在发送或发送启动区被占用时返回HAL_BUSY
  */
 uint8_t UART_Transmit_Data(UART_HandleTypeDef *huart, uint8_t *Data, uint16_t Length);
-
-/* Exported function definitions ---------------------------------------------*/
 
 #ifdef __cplusplus
 }

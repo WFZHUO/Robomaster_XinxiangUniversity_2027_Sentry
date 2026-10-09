@@ -1,6 +1,6 @@
 /**
  * @file drv_usb.cpp
- * @author WangFonzhuo
+ * @author WangFongzhuo
  * @brief USB通用接口
  * @version 1.0
  * @date 2026-05-09 27赛季
@@ -12,10 +12,6 @@
 #include "usbd_cdc_if.h"
 #include "sys_timestamp.h"
 #include <string.h>
-
-/* Macros --------------------------------------------------------------------*/
-
-/* Types ---------------------------------------------------------------------*/
 
 /* Variables -----------------------------------------------------------------*/
 
@@ -34,6 +30,7 @@ extern bool init_finished;
 
 /* Function prototypes -------------------------------------------------------*/
 
+// USB重新初始化接收
 static void USB_Reinit();
 
 /* Function definitions ------------------------------------------------------*/
@@ -53,20 +50,6 @@ void USB_Init(USB_Callback Callback_Function)
     USB_Manage_Object.Rx_Buffer_Active = USB_Manage_Object.Rx_Buffer_0;
 
     USB_Reinit();
-}
-
-/**
- * @brief USB重新初始化接收
- */
-static void USB_Reinit()
-{
-    if (hUsbDeviceHS.pClassData == nullptr)
-    {
-        return;
-    }
-
-    USBD_CDC_SetRxBuffer(&hUsbDeviceHS, USB_Manage_Object.Rx_Buffer_Active);
-    USBD_CDC_ReceivePacket(&hUsbDeviceHS);
 }
 
 /**
@@ -135,6 +118,20 @@ void USB_ReceiveCallback(uint8_t *Buffer, uint32_t Length)
     {
         USB_Manage_Object.Callback_Function(USB_Manage_Object.Rx_Buffer_Ready, Length);
     }
+}
+
+/**
+ * @brief USB重新初始化接收
+ */
+static void USB_Reinit()
+{
+    if (hUsbDeviceHS.pClassData == nullptr)
+    {
+        return;
+    }
+
+    USBD_CDC_SetRxBuffer(&hUsbDeviceHS, USB_Manage_Object.Rx_Buffer_Active);
+    USBD_CDC_ReceivePacket(&hUsbDeviceHS);
 }
 
 /*----------------------------------------------------------------------------*/

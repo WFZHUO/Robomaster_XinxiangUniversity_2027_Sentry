@@ -17,7 +17,6 @@ extern "C" {
 
 #include "spi.h"
 #include "stm32h7xx_hal.h"
-
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -97,12 +96,9 @@ void SPI_Init(SPI_HandleTypeDef *hspi, SPI_Callback Callback_Function);
  * @param Activate_Level 片选有效电平
  * @return uint8_t HAL执行状态
  */
-uint8_t SPI_Transmit_Data(SPI_HandleTypeDef *hspi,
-                          uint8_t *Data,
-                          uint16_t Length,
-                          GPIO_TypeDef *GPIOx,
-                          uint16_t GPIO_Pin,
-                          GPIO_PinState Activate_Level);
+uint8_t SPI_Transmit_Data(SPI_HandleTypeDef *hspi, uint8_t *Data,
+                          uint16_t Length, GPIO_TypeDef *GPIOx,
+                          uint16_t GPIO_Pin, GPIO_PinState Activate_Level);
 
 /**
  * @brief SPI DMA全双工收发数据
@@ -115,14 +111,9 @@ uint8_t SPI_Transmit_Data(SPI_HandleTypeDef *hspi,
  * @param Activate_Level 片选有效电平
  * @return uint8_t HAL执行状态
  */
-uint8_t SPI_Transmit_Receive_Data(SPI_HandleTypeDef *hspi,
-                                  uint8_t *Tx_Data,
-                                  uint16_t Length,
-                                  GPIO_TypeDef *GPIOx,
-                                  uint16_t GPIO_Pin,
-                                  GPIO_PinState Activate_Level);
-
-/* Exported function definitions ---------------------------------------------*/
+uint8_t SPI_Transmit_Receive_Data(SPI_HandleTypeDef *hspi, uint8_t *Tx_Data,
+                                  uint16_t Length, GPIO_TypeDef *GPIOx,
+                                  uint16_t GPIO_Pin, GPIO_PinState Activate_Level);
 
 #ifdef __cplusplus
 }

@@ -1,6 +1,6 @@
 /**
  * @file drv_usb.h
- * @author WangFonzhuo
+ * @author WangFongzhuo
  * @brief USB通用接口
  * @version 1.0
  * @date 2026-05-09 27赛季
@@ -38,7 +38,7 @@ struct Struct_USB_Manage_Object
 {
     USB_Callback Callback_Function;
 
-    // 双缓冲适配的缓冲区 以及 当前激活的缓冲区
+    // 双缓冲适配的缓冲区 以及当前激活的缓冲区
     uint8_t *Rx_Buffer_0;
     uint8_t *Rx_Buffer_1;
     // 正在接收的缓冲区
@@ -80,8 +80,6 @@ uint8_t USB_Transmit_Data(uint8_t *Data, uint16_t Length);
  * @param Length 接收数据长度
  */
 void USB_ReceiveCallback(uint8_t *Buffer, uint32_t Length);
-
-/* Exported function definitions ---------------------------------------------*/
 
 #ifdef __cplusplus
 }

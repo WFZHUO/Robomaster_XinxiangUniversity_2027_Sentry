@@ -1,6 +1,6 @@
 /**
  * @file alg_waveform.h
- * @author WangFonzhuo
+ * @author WangFongzhuo
  * @brief 常用测试波形发生器
  * @note  使用方法 ：
  *          0) 定义一个 Class_Waveform 类型的对象
@@ -310,10 +310,6 @@ protected:
     // 32位XORSHIFT伪随机数发生器
     uint32_t XORSHIFT32(uint32_t &__State);
 };
-
-/* Exported variables --------------------------------------------------------*/
-
-/* Exported function prototypes ----------------------------------------------*/
 
 /* Exported function definitions ---------------------------------------------*/
 

@@ -1,7 +1,7 @@
 /**
  * @file drv_can.cpp
- * @author WangFonzhuo
- * @brief FDCAN通信初始化与配置流程
+ * @author WangFongzhuo
+ * @brief CAN通信初始化与配置流程
  * @version 1.0
  * @date 2026-05-20 27赛季
  */
@@ -11,116 +11,28 @@
 #include "drv_can.h"
 #include "sys_timestamp.h"
 
-/* Macros --------------------------------------------------------------------*/
-
-/* Types ---------------------------------------------------------------------*/
-
 /* Variables -----------------------------------------------------------------*/
 
-// 全局初始化完成标志位
-extern bool init_finished;
-
+// CAN管理对象
 Struct_CAN_Manage_Object CAN1_Manage_Object = {nullptr};
 Struct_CAN_Manage_Object CAN2_Manage_Object = {nullptr};
 Struct_CAN_Manage_Object CAN3_Manage_Object = {nullptr};
 
+// 全局初始化完成标志位
+extern bool init_finished;
+
 /* Function prototypes -------------------------------------------------------*/
 
+// 字节长度转换为FDCAN DLC宏
 static uint32_t CAN_Length_To_DLC(uint16_t Length);
-static void CAN_Filter_Mask_Config(FDCAN_HandleTypeDef *hfdcan);
+
+// 获取CAN管理对象
 static Struct_CAN_Manage_Object *CAN_Get_Manage_Object(FDCAN_HandleTypeDef *hfdcan);
 
+// 配置CAN的过滤器
+static void CAN_Filter_Mask_Config(FDCAN_HandleTypeDef *hfdcan);
+
 /* Function definitions ------------------------------------------------------*/
-
-/**
- * @brief 字节长度转换为FDCAN DLC宏
- *
- * @param Length 字节长度
- * @return uint32_t FDCAN DLC宏
- */
-static uint32_t CAN_Length_To_DLC(uint16_t Length)
-{
-    switch (Length)
-    {
-    case 0:
-        return FDCAN_DLC_BYTES_0;
-    case 1:
-        return FDCAN_DLC_BYTES_1;
-    case 2:
-        return FDCAN_DLC_BYTES_2;
-    case 3:
-        return FDCAN_DLC_BYTES_3;
-    case 4:
-        return FDCAN_DLC_BYTES_4;
-    case 5:
-        return FDCAN_DLC_BYTES_5;
-    case 6:
-        return FDCAN_DLC_BYTES_6;
-    case 7:
-        return FDCAN_DLC_BYTES_7;
-    case 8:
-        return FDCAN_DLC_BYTES_8;
-    default:
-        return FDCAN_DLC_BYTES_0;
-    }
-}
-
-/**
- * @brief 获取CAN管理对象
- *
- * @param hfdcan CAN编号
- * @return Struct_CAN_Manage_Object* CAN管理对象
- */
-static Struct_CAN_Manage_Object *CAN_Get_Manage_Object(FDCAN_HandleTypeDef *hfdcan)
-{
-    if (hfdcan == nullptr)
-    {
-        return nullptr;
-    }
-
-    if (hfdcan->Instance == FDCAN1)
-    {
-        return &CAN1_Manage_Object;
-    }
-    else if (hfdcan->Instance == FDCAN2)
-    {
-        return &CAN2_Manage_Object;
-    }
-#ifdef FDCAN3
-    else if (hfdcan->Instance == FDCAN3)
-    {
-        return &CAN3_Manage_Object;
-    }
-#endif
-
-    return nullptr;
-}
-
-/**
- * @brief 配置CAN的过滤器
- *
- * @param hfdcan CAN编号
- */
-static void CAN_Filter_Mask_Config(FDCAN_HandleTypeDef *hfdcan)
-{
-    FDCAN_FilterTypeDef can_filter_init_structure = {0};
-
-    // 配置RXFIFO0全通滤波器
-    can_filter_init_structure.IdType = FDCAN_STANDARD_ID;
-    can_filter_init_structure.FilterIndex = 0;
-    can_filter_init_structure.FilterType = FDCAN_FILTER_MASK;
-    can_filter_init_structure.FilterConfig = FDCAN_FILTER_TO_RXFIFO0;
-    can_filter_init_structure.FilterID1 = 0x00000000;
-    can_filter_init_structure.FilterID2 = 0x00000000;
-    HAL_FDCAN_ConfigFilter(hfdcan, &can_filter_init_structure);
-
-    // 全局滤波器: 拒绝未匹配标准帧、未匹配扩展帧、标准遥控帧、扩展遥控帧
-    HAL_FDCAN_ConfigGlobalFilter(hfdcan,
-                                  FDCAN_REJECT,
-                                  FDCAN_REJECT,
-                                  FDCAN_REJECT_REMOTE,
-                                  FDCAN_REJECT_REMOTE);
-}
 
 /**
  * @brief 初始化CAN总线
@@ -288,6 +200,94 @@ extern "C" void HAL_FDCAN_ErrorStatusCallback(FDCAN_HandleTypeDef *hfdcan, uint3
         // CAN 进入 Bus-Off, 启动 Bus-Off 恢复流程
         CLEAR_BIT(hfdcan->Instance->CCCR, FDCAN_CCCR_INIT);
     }
+}
+
+/**
+ * @brief 字节长度转换为FDCAN DLC宏
+ *
+ * @param Length 字节长度
+ * @return uint32_t FDCAN DLC宏
+ */
+static uint32_t CAN_Length_To_DLC(uint16_t Length)
+{
+    switch (Length)
+    {
+    case 0:
+        return FDCAN_DLC_BYTES_0;
+    case 1:
+        return FDCAN_DLC_BYTES_1;
+    case 2:
+        return FDCAN_DLC_BYTES_2;
+    case 3:
+        return FDCAN_DLC_BYTES_3;
+    case 4:
+        return FDCAN_DLC_BYTES_4;
+    case 5:
+        return FDCAN_DLC_BYTES_5;
+    case 6:
+        return FDCAN_DLC_BYTES_6;
+    case 7:
+        return FDCAN_DLC_BYTES_7;
+    case 8:
+        return FDCAN_DLC_BYTES_8;
+    default:
+        return FDCAN_DLC_BYTES_0;
+    }
+}
+
+/**
+ * @brief 获取CAN管理对象
+ *
+ * @param hfdcan CAN编号
+ * @return Struct_CAN_Manage_Object* CAN管理对象
+ */
+static Struct_CAN_Manage_Object *CAN_Get_Manage_Object(FDCAN_HandleTypeDef *hfdcan)
+{
+    if (hfdcan == nullptr)
+    {
+        return nullptr;
+    }
+
+    if (hfdcan->Instance == FDCAN1)
+    {
+        return &CAN1_Manage_Object;
+    }
+    else if (hfdcan->Instance == FDCAN2)
+    {
+        return &CAN2_Manage_Object;
+    }
+    else if (hfdcan->Instance == FDCAN3)
+    {
+        return &CAN3_Manage_Object;
+    }
+
+    return nullptr;
+}
+
+/**
+ * @brief 配置CAN的过滤器
+ *
+ * @param hfdcan CAN编号
+ */
+static void CAN_Filter_Mask_Config(FDCAN_HandleTypeDef *hfdcan)
+{
+    FDCAN_FilterTypeDef can_filter_init_structure = {0};
+
+    // 配置RXFIFO0全通滤波器
+    can_filter_init_structure.IdType = FDCAN_STANDARD_ID;
+    can_filter_init_structure.FilterIndex = 0;
+    can_filter_init_structure.FilterType = FDCAN_FILTER_MASK;
+    can_filter_init_structure.FilterConfig = FDCAN_FILTER_TO_RXFIFO0;
+    can_filter_init_structure.FilterID1 = 0x00000000;
+    can_filter_init_structure.FilterID2 = 0x00000000;
+    HAL_FDCAN_ConfigFilter(hfdcan, &can_filter_init_structure);
+
+    // 全局滤波器: 拒绝未匹配标准帧、未匹配扩展帧、标准遥控帧、扩展遥控帧
+    HAL_FDCAN_ConfigGlobalFilter(hfdcan,
+                                  FDCAN_REJECT,
+                                  FDCAN_REJECT,
+                                  FDCAN_REJECT_REMOTE,
+                                  FDCAN_REJECT_REMOTE);
 }
 
 /*----------------------------------------------------------------------------*/

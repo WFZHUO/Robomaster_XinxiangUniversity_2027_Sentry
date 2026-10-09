@@ -1,7 +1,7 @@
 /**
  * @file drv_can.h
- * @author WangFonzhuo
- * @brief FDCAN通信初始化与配置流程
+ * @author WangFongzhuo
+ * @brief CAN通信初始化与配置流程
  * @version 1.0
  * @date 2026-05-20 27赛季
  */
@@ -13,7 +13,6 @@
 
 #include "fdcan.h"
 #include "stm32h7xx_hal.h"
-
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -81,9 +80,6 @@ void TIM_100us_CAN_PeriodElapsedCallback();
  * @brief CAN的TIM定时器中断发送回调函数
  */
 void TIM_1ms_CAN_PeriodElapsedCallback();
-
-/* Exported function definitions ---------------------------------------------*/
-
 
 #endif /* DRV_CAN_H */
 

@@ -1,9 +1,8 @@
 /**
  * @file drv_tim.h
- * @author WangFonzhuo
+ * @author WangFongzhuo
  * @brief TIM通用接口
  * @version 1.0
- * @date 2025-12-30 26赛季定稿
  * @date 2026-04-18 27赛季
  */
 
@@ -16,10 +15,9 @@ extern "C" {
 
 /* Includes ------------------------------------------------------------------*/
 
+#include "tim.h"
 #include "stm32h7xx_hal.h"
 #include <stdbool.h>
-
-/* Exported macros -----------------------------------------------------------*/
 
 /* Exported types ------------------------------------------------------------*/
 
@@ -69,7 +67,6 @@ extern Struct_TIM_Manage_Object TIM24_Manage_Object;
  * @param Callback_Function 处理回调函数
  */
 void TIM_Init(TIM_HandleTypeDef *htim, TIM_Call_Back Callback_Function);
-
 
 #ifdef __cplusplus
 }

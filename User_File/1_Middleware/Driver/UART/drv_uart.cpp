@@ -103,10 +103,19 @@ extern bool init_finished;
 
 /* Function prototypes -------------------------------------------------------*/
 
+// 获取UART管理对象
 static Struct_UART_Manage_Object *UART_Get_Manage_Object(UART_HandleTypeDef *huart);
+
+// 获取UART底层缓冲区集合
 static Struct_UART_Buffer_Object *UART_Get_Buffer_Object(UART_HandleTypeDef *huart);
+
+// 重新启动UART空闲事件DMA接收
 static HAL_StatusTypeDef UART_Restart_Receive(UART_HandleTypeDef *huart, Struct_UART_Manage_Object *Manage_Object);
+
+// 原子占用UART发送启动区
 static bool UART_Try_Lock_Transmit(Struct_UART_Buffer_Object *Buffer_Object);
+
+// 释放UART发送启动区
 static void UART_Unlock_Transmit(Struct_UART_Buffer_Object *Buffer_Object);
 
 /* Function definitions ------------------------------------------------------*/
@@ -207,7 +216,7 @@ uint8_t UART_Transmit_Data(UART_HandleTypeDef *huart, uint8_t *Data, uint16_t Le
  * @param huart UART编号
  * @param Size 本次接收的数据长度
  */
-void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
+extern "C" void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
 {
     Struct_UART_Manage_Object *manage_object = UART_Get_Manage_Object(huart);
 
@@ -255,7 +264,7 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
  *
  * @param huart UART编号
  */
-void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
+extern "C" void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
 {
     UART_Reinit(huart);
 }

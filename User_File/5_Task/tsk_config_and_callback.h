@@ -1,9 +1,8 @@
 /**
  * @file tsk_config_and_callback.h
- * @author WangFonzhuo
- * @brief 当成mian.h来用
+ * @author WangFongzhuo
+ * @brief 当成main.h来用
  * @version 1.0
- * @date 2025-12-30 26赛季定稿
  * @date 2026-04-18 27赛季
  */
 
@@ -20,9 +19,15 @@ extern "C" {
 
 /* Exported macros -----------------------------------------------------------*/
 
+//---
+
 /* Exported types ------------------------------------------------------------*/
 
+//---
+
 /* Exported variables --------------------------------------------------------*/
+
+//---
 
 /* Exported function prototypes ----------------------------------------------*/
 
@@ -38,6 +43,7 @@ void Task_Loop();
 
 /* Exported function definitions ---------------------------------------------*/
 
+//---
 
 #ifdef __cplusplus
 }

@@ -10,10 +10,7 @@
 /* Includes ------------------------------------------------------------------*/
 
 #include "drv_tim.h"
-
-/* Macros --------------------------------------------------------------------*/
-
-/* Types ---------------------------------------------------------------------*/
+#include "stm32h7xx_hal.h"
 
 /* Variables -----------------------------------------------------------------*/
 
@@ -34,8 +31,6 @@ Struct_TIM_Manage_Object TIM16_Manage_Object;
 Struct_TIM_Manage_Object TIM17_Manage_Object;
 Struct_TIM_Manage_Object TIM23_Manage_Object;
 Struct_TIM_Manage_Object TIM24_Manage_Object;
-
-/* Function prototypes -------------------------------------------------------*/
 
 /* Function definitions ------------------------------------------------------*/
 

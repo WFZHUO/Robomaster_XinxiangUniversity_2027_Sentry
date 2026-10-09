@@ -1,6 +1,6 @@
 /**
  * @file sys_timestamp.h
- * @author WangFonzhuo
+ * @author WangFongzhuo
  * @brief 时间计算相关支持库
  * @version 1.0
  * @date 2026-04-25 27赛季
@@ -18,8 +18,6 @@
 
 #include "tim.h"
 #include "stm32h7xx_hal.h"
-
-/* Exported macros -----------------------------------------------------------*/
 
 /* Exported types ------------------------------------------------------------*/
 

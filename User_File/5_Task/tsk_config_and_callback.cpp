@@ -25,6 +25,7 @@
 #include "dvc_serialplot.h"
 #include "dvc_motor_dji.h"
 #include "dvc_vofa.h"
+#include "dvc_dr16.h"
 
 /* Macros --------------------------------------------------------------------*/
 
@@ -54,6 +55,9 @@ const char *Serialplot_Rx_List[] =
 // Serialplot测试用变量
 float Motor_C620_Now_Omega, Motor_C620_Now_Current, Motor_C620_Now_Encoder, Motor_C620_Now_Angle;
 float Motor_C620_Target_Angle, Motor_C620_Target_Omega, Motor_C620_Target_Current;
+// DR16遥控器数据
+float DR16_Right_X, DR16_Right_Y, DR16_Left_X, DR16_Left_Y, DR16_Yaw;
+float DR16_Left_Switch, DR16_Right_Switch, DR16_Online;
 
 // 波形发生器
 Class_Waveform Waveform_Sine;
@@ -61,6 +65,9 @@ float Waveform_Sine_Out;
 
 // C620
 Class_Motor_DJI_C620 Motor_C620;
+
+// dr16
+Class_DR16 DR16;
 
 // 全局初始化完成标志位
 bool init_finished = false;
@@ -77,6 +84,14 @@ bool init_finished = false;
 void UART1_Callback(uint8_t *Buffer, uint16_t Length)
 {
     //HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_15);   
+}
+
+/**
+ * @brief UART5任务回调函数, 绑定DR16遥控器
+ */
+void UART5_Callback(uint8_t *Buffer, uint16_t Length)
+{
+    DR16.UART_RxCpltCallback(Buffer, Length);
 }
 
 /**
@@ -160,6 +175,9 @@ void Task1ms_Callback()
 {
     // 1ms任务
 
+    // DR16遥控器任务
+    DR16.TIM_1ms_Alive_PeriodElapsedCallback();
+
     // 按键状态更新
     if(Key.isPressed)
     {
@@ -179,6 +197,14 @@ void Task1ms_Callback()
     Motor_C620_Target_Angle = Motor_C620.Get_Target_Angle();
     Motor_C620_Target_Omega = Motor_C620.Get_Target_Omega();
     Motor_C620_Target_Current = Motor_C620.Get_Target_Current();
+    DR16_Right_X = DR16.Get_Right_X();
+    DR16_Right_Y = DR16.Get_Right_Y();
+    DR16_Left_X = DR16.Get_Left_X();
+    DR16_Left_Y = DR16.Get_Left_Y();
+    DR16_Yaw = DR16.Get_Yaw();
+    DR16_Left_Switch = static_cast<float>(DR16.Get_Left_Switch());
+    DR16_Right_Switch = static_cast<float>(DR16.Get_Right_Switch());
+    DR16_Online = static_cast<float>(DR16.Get_Status());
 
     Serialplot.TIM_1ms_Write_PeriodElapsedCallback();
 
@@ -245,7 +271,7 @@ void Task_Init()
     BSP_WS2812.Init(&hspi6);
     // 初始化Serialplot
     Serialplot.Init(7, Serialplot_Rx_List);
-    Serialplot.Set_Data(8,
+    Serialplot.Set_Data(16,
                         &Waveform_Sine_Out,
                         &Motor_C620_Now_Omega,
                         &Motor_C620_Now_Current,
@@ -253,7 +279,15 @@ void Task_Init()
                         &Motor_C620_Now_Angle,
                         &Motor_C620_Target_Angle,
                         &Motor_C620_Target_Omega,
-                        &Motor_C620_Target_Current);
+                        &Motor_C620_Target_Current,
+                        &DR16_Right_X,
+                        &DR16_Right_Y,
+                        &DR16_Left_X,
+                        &DR16_Left_Y,
+                        &DR16_Yaw,
+                        &DR16_Left_Switch,
+                        &DR16_Right_Switch,
+                        &DR16_Online);
 
     // 初始化波形
     Waveform_Sine.Init();
@@ -266,6 +300,7 @@ void Task_Init()
     TIM_Init(&htim5, Task3600s_Callback);
     // 初始化UART
     UART_Init(&huart1, UART1_Callback);
+    UART_Init(&huart5, UART5_Callback);
     // 初始化CAN
     CAN_Init(&hfdcan1, CAN1_Callback);
     // 初始化OSPI
@@ -283,6 +318,9 @@ void Task_Init()
     // 初始化W25Q64JV
     BSP_W25Q64JV.Init(&hospi1);
 
+    // 初始化DR16
+    DR16.Init();
+
     // 设置初始化完成标志位
     init_finished = true;
 }
@@ -296,7 +334,7 @@ void Task_Loop()
 
     if (played == false)
     {
-        BuzzerSongs_Play_Godfather(1.0f);
+        BuzzerSongs_Play_Godfather(0.0f);
         played = true;
     }
 }

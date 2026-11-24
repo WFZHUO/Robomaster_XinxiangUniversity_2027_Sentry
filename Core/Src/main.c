@@ -113,6 +113,7 @@ int main(void)
   MX_SPI6_Init();
   MX_OCTOSPI1_Init();
   MX_USB_DEVICE_Init();
+  MX_UART5_Init();
   /* USER CODE BEGIN 2 */
 
   Task_Init();

@@ -3,7 +3,7 @@
  * @author WangFongzhuo
  * @brief 当成main.c来用
  * @version 1.0
- * @date 2026-04-18 27赛季
+ * @date 2026-04-18
  */
 
 /* Includes ------------------------------------------------------------------*/
@@ -26,6 +26,7 @@
 #include "dvc_motor_dji.h"
 #include "dvc_vofa.h"
 #include "dvc_dr16.h"
+#include "bsp_power.h"
 
 /* Macros --------------------------------------------------------------------*/
 
@@ -41,7 +42,7 @@
 Class_ArkKey Key;
 
 // Serialplot
-Class_Serialplot_USB Serialplot;
+Class_Serialplot_UART Serialplot;
 const char *Serialplot_Rx_List[] =
 {
     "op",
@@ -79,27 +80,11 @@ bool init_finished = false;
 /* Function definitions ------------------------------------------------------*/
 
 /**
- * @brief UART1任务回调函数
+ * @brief UART10任务回调函数
  */
-void UART1_Callback(uint8_t *Buffer, uint16_t Length)
+void UART10_Callback(uint8_t *Buffer, uint16_t Length)
 {
-    //HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_15);   
-}
-
-/**
- * @brief UART5任务回调函数, 绑定DR16遥控器
- */
-void UART5_Callback(uint8_t *Buffer, uint16_t Length)
-{
-    DR16.UART_RxCpltCallback(Buffer, Length);
-}
-
-/**
- * @brief USB任务回调函数, 绑定Serialplot
- */
-void USB0_Callback(uint8_t *Buffer, uint32_t Length)
-{
-    Serialplot.USB_RxCpltCallback(Buffer, static_cast<uint16_t>(Length));
+    Serialplot.UART_RxCpltCallback(Buffer, static_cast<uint16_t>(Length));
 
     switch (Serialplot.Get_Variable_Index())
     {
@@ -135,6 +120,22 @@ void USB0_Callback(uint8_t *Buffer, uint32_t Length)
             break;
     }
 
+    //HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_15);   
+}
+
+/**
+ * @brief UART5任务回调函数, 绑定DR16遥控器
+ */
+void UART5_Callback(uint8_t *Buffer, uint16_t Length)
+{
+    DR16.UART_RxCpltCallback(Buffer, Length);
+}
+
+/**
+ * @brief USB任务回调函数, 绑定Serialplot
+ */
+void USB0_Callback(uint8_t *Buffer, uint32_t Length)
+{
     //HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_15);   
 }
 
@@ -182,7 +183,7 @@ void Task1ms_Callback()
     if(Key.isPressed)
     {
         // 按键测试, 按一次LED翻转一次
-        HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_15);   
+        //HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_15);   
     }
     Class_ArkKey::ClearAllFlags();
     
@@ -261,6 +262,9 @@ void Task3600s_Callback()
  */
 void Task_Init()
 {
+    // 初始化可控电源开关
+    BSP_Power.Init(false, false, true);
+
     // 初始化时间戳
     SYS_Timestamp.Init(&htim5);
     // 初始化蜂鸣器
@@ -270,7 +274,7 @@ void Task_Init()
     // 初始化WS2812
     BSP_WS2812.Init(&hspi6);
     // 初始化Serialplot
-    Serialplot.Init(7, Serialplot_Rx_List);
+    Serialplot.Init(&huart10, 7, Serialplot_Rx_List);
     Serialplot.Set_Data(16,
                         &Waveform_Sine_Out,
                         &Motor_C620_Now_Omega,
@@ -299,7 +303,7 @@ void Task_Init()
     TIM_Init(&htim7, Task1ms_Callback);
     TIM_Init(&htim5, Task3600s_Callback);
     // 初始化UART
-    UART_Init(&huart1, UART1_Callback);
+    UART_Init(&huart10, UART10_Callback);
     UART_Init(&huart5, UART5_Callback);
     // 初始化CAN
     CAN_Init(&hfdcan1, CAN1_Callback);
@@ -334,7 +338,7 @@ void Task_Loop()
 
     if (played == false)
     {
-        BuzzerSongs_Play_Godfather(0.0f);
+        BuzzerSongs_Play_Godfather(1.0f);
         played = true;
     }
 }

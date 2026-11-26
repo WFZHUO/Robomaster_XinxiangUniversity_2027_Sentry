@@ -33,6 +33,27 @@
       ],
       "dependsOn": "Build Sentry Debug",
       "problemMatcher": []
+    },
+    {
+        "label": "Flash Sentry (PTD02HW)",
+        "type": "process",
+        "command": "C:/0Embedded/ToolChains/pyocd-venv/Scripts/pyocd.exe",
+        "args": [
+            "load",
+            "--target",
+            "stm32h723xx",
+            "--uid",
+            "cmsisdap:ATK-A0F2261F",
+            "-Ocmsis_dap.limit_packets=1",
+            "-Ocmsis_dap.deferred_transfers=0",
+            "${workspaceFolder}/build/Debug/Sentry.elf"
+        ],
+        "options": {
+            "cwd": "${workspaceFolder}"
+        },
+        "dependsOn": "Build Sentry Debug",
+        "dependsOrder": "sequence",
+        "problemMatcher": []
     }
   ]
 }

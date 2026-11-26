@@ -91,6 +91,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     User_File/1_Middleware/Driver/OSPI/drv_ospi.cpp
     User_File/2_Device/BSP/W25Q64JV/bsp_w25q64jv.cpp
     User_File/2_Device/DR16/dvc_dr16.cpp
+    User_File/2_Device/BSP/Power/bsp_power.cpp
 )
 
 # Add include paths
@@ -115,6 +116,7 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     User_File/1_Middleware/Driver/OSPI
     User_File/2_Device/BSP/W25Q64JV
     User_File/2_Device/DR16
+    User_File/2_Device/BSP/Power
 )
 
 # Add project symbols (macros)

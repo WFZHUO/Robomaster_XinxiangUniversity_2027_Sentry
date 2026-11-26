@@ -60,7 +60,6 @@ void DMA1_Stream1_IRQHandler(void);
 void DMA1_Stream2_IRQHandler(void);
 void FDCAN1_IT0_IRQHandler(void);
 void FDCAN1_IT1_IRQHandler(void);
-void USART1_IRQHandler(void);
 void TIM5_IRQHandler(void);
 void UART5_IRQHandler(void);
 void TIM7_IRQHandler(void);
@@ -69,6 +68,7 @@ void SPI6_IRQHandler(void);
 void OCTOSPI1_IRQHandler(void);
 void MDMA_IRQHandler(void);
 void BDMA_Channel0_IRQHandler(void);
+void USART10_IRQHandler(void);
 /* USER CODE BEGIN EFP */
 
 /* USER CODE END EFP */

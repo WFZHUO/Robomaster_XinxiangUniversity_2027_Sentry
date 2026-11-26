@@ -185,10 +185,7 @@ inline float Class_DR16::Get_Mouse_Y() const { return Data.Mouse_Y; }
 inline float Class_DR16::Get_Mouse_Z() const { return Data.Mouse_Z; }
 inline Enum_DR16_Key_Status Class_DR16::Get_Mouse_Left_Key() const { return Data.Mouse_Left_Key; }
 inline Enum_DR16_Key_Status Class_DR16::Get_Mouse_Right_Key() const { return Data.Mouse_Right_Key; }
-inline Enum_DR16_Key_Status Class_DR16::Get_Keyboard_Key(Enum_DR16_Keyboard_Key Key) const
-{
-    return Data.Keyboard_Key[Key];
-}
+inline Enum_DR16_Key_Status Class_DR16::Get_Keyboard_Key(Enum_DR16_Keyboard_Key Key) const { return Data.Keyboard_Key[Key]; }
 
 #endif /* DVC_DR16_H */
 

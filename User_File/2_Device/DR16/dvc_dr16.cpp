@@ -23,7 +23,6 @@ void Class_DR16::Init()
 
 /**
  * @brief 解析并校验18字节DBUS数据
- * @note 校验摇杆、拨轮、拨杆和鼠标按键后才允许整帧更新
  */
 bool Class_DR16::Data_Process(const uint8_t *Rx_Data, Struct_DR16_UART_Data &Raw_Data)
 {
